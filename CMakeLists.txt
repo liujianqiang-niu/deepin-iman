@@ -46,6 +46,12 @@ target_link_libraries(deepin-iman PRIVATE
 
 install(TARGETS deepin-iman DESTINATION bin)
 
+# Install desktop file
+install(FILES debian/deepin-iman.desktop DESTINATION share/applications)
+
+# Install man page
+install(FILES debian/deepin-iman.1 DESTINATION share/man/man1)
+
 # Tests (added incrementally per task)
 # Manually generate moc for test cpp file (Q_OBJECT class defined in .cpp)
 get_target_property(MOC_EXECUTABLE Qt6::moc LOCATION)

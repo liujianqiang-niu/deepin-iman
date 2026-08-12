@@ -1,0 +1,55 @@
+.TH DEEPIN-IMAN 1 "August 2026" "deepin-iman 0.1.0" "User Commands"
+.SH NAME
+deepin-iman \- AI-powered man page viewer for deepin
+.SH SYNOPSIS
+.B deepin-iman
+.RI [ options ]
+.SH DESCRIPTION
+.B deepin-iman
+is a man page browser that deeply integrates AI capabilities with the
+traditional man page experience. It allows users to browse, search, and
+navigate all man pages, and leverages AI to provide Chinese translation,
+usage examples, command Q&A, and command parsing.
+.SH FEATURES
+.TP
+.B Full-text search
+Search across all man pages using SQLite FTS5 full-text indexing.
+.TP
+.B Cross-reference navigation
+Click SEE ALSO links to jump between related man pages.
+.TP
+.B AI translation
+Multi-provider AI translation (OpenAI/Claude/Qwen/GLM) with preset
+Chinese translation packages and local caching.
+.TP
+.B Side-by-side view
+Chinese and English man pages displayed side by side.
+.TP
+.B AI examples
+AI-generated usage examples with annotations and expected output.
+.TP
+.B Embedded terminal
+Run commands directly within the application.
+.TP
+.B Cheat sheets
+AI-generated quick reference cards, exportable as PDF or Markdown.
+.TP
+.B Learning history
+Browse history with AI-generated weekly learning reports.
+.SH FILES
+.TP
+.I ~/.local/share/deepin-iman/
+Application data directory (index, cache, history, favorites).
+.TP
+.I ~/.config/deepin-iman/
+Configuration directory (QSettings).
+.SH SEE ALSO
+.BR man (1),
+.BR mandoc (1),
+.BR groff (1)
+.SH AUTHOR
+liujianqiang <liujianqiang@uniontech.com>
+.SH COPYRIGHT
+Copyright \(co 2026 UnionTech Software Technology Co., Ltd.
+.br
+Licensed under LGPL-2.1+

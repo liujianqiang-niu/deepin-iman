@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=deepin iman
+Name[zh_CN]=deepin man 手册
+GenericName=Man Page Viewer
+GenericName[zh_CN]=Man 手册查看器
+Comment=AI-powered man page viewer
+Comment[zh_CN]=AI 驱动的 man 手册查看器
+Exec=deepin-iman
+Icon=help-browser
+Terminal=false
+Categories=System;Utility;Documentation;
+Keywords=man;manual;documentation;help;command;
+StartupNotify=true
+MimeType=text/plain;

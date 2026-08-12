@@ -1,0 +1,9 @@
+deepin-iman (0.1.0-1) unstable; urgency=low
+
+  * Initial release.
+  * MVP man page browser: scan, index, search, render, navigate.
+  * mandoc -Thtml pipeline for man page rendering.
+  * SQLite FTS5 full-text search with cross-reference jumping.
+  * DTK6 3-pane UI (sidebar, man view, AI panel placeholder).
+
+ -- liujianqiang <liujianqiang@uniontech.com>  Wed, 12 Aug 2026 14:00:00 +0800

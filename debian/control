@@ -1,0 +1,44 @@
+Source: deepin-iman
+Section: utils
+Priority: optional
+Maintainer: liujianqiang <liujianqiang@uniontech.com>
+Build-Depends:
+    cmake,
+    debhelper-compat (= 13),
+    pkg-config,
+    qt6-base-dev,
+    qt6-base-dev-tools,
+    libdtk6widget-dev,
+    libdtk6core-dev,
+    libdtk6gui-dev,
+    mandoc,
+Standards-Version: 4.6.2.0
+Homepage: https://github.com/linuxdeepin/deepin-iman
+Vcs-Git: https://github.com/linuxdeepin/deepin-iman.git
+Vcs-Browser: https://github.com/linuxdeepin/deepin-iman
+Rules-Requires-Root: no
+
+Package: deepin-iman
+Architecture: any
+Depends:
+    ${shlibs:Depends},
+    ${misc:Depends},
+    mandoc,
+Recommends:
+    manpages-zh | manpages-cn,
+    libqtermwidget6-2,
+Description: AI-powered man page viewer for deepin
+ deepin-iman is a man page browser that deeply integrates AI capabilities
+ with traditional man page experience. It allows users to browse, search,
+ and navigate all man pages, and leverages AI to provide Chinese translation,
+ usage examples, command Q&A, and command parsing.
+ .
+ Key features:
+  * Full-text search across all man pages (SQLite FTS5)
+  * Cross-reference navigation (SEE ALSO links)
+  * AI-powered translation (multi-provider: OpenAI/Claude/Qwen/GLM)
+  * Chinese + English side-by-side view
+  * AI-generated usage examples
+  * Embedded terminal
+  * Cheat sheet generation
+  * Learning history with AI weekly reports
