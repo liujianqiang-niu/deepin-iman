@@ -1,5 +1,6 @@
 // src/view/SettingsDialog.cpp
 #include "SettingsDialog.h"
+#include "service/ai/OpenAiCompatibleProvider.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStandardItem>
@@ -51,10 +52,10 @@ SettingsDialog::SettingsDialog(const QList<ProviderConfig>& configs,
     m_nameEdit->setPlaceholderText("如：OpenAI、智谱 GLM");
     layout->addWidget(m_nameEdit);
 
-    auto* apiBaseLabel = new DLabel("API 地址：");
+    auto* apiBaseLabel = new DLabel("Base URL：");
     layout->addWidget(apiBaseLabel);
     m_apiBaseEdit = new DLineEdit(this);
-    m_apiBaseEdit->setPlaceholderText("如：https://api.openai.com/v1/chat/completions");
+    m_apiBaseEdit->setPlaceholderText("如：https://api.openai.com/v1");
     layout->addWidget(m_apiBaseEdit);
 
     auto* apiKeyLabel = new DLabel("API Key：");
@@ -69,6 +70,12 @@ SettingsDialog::SettingsDialog(const QList<ProviderConfig>& configs,
     m_modelEdit = new DLineEdit(this);
     m_modelEdit->setPlaceholderText("如：gpt-4o、glm-4-plus、qwen-max");
     layout->addWidget(m_modelEdit);
+
+    m_btnTest = new DPushButton("测试连接", this);
+    layout->addWidget(m_btnTest);
+
+    m_statusLabel = new DLabel("", this);
+    layout->addWidget(m_statusLabel);
 
     addContent(widget);
 
@@ -85,6 +92,7 @@ SettingsDialog::SettingsDialog(const QList<ProviderConfig>& configs,
     connect(m_btnAdd, &DPushButton::clicked, this, &SettingsDialog::onAddClicked);
     connect(m_btnDelete, &DPushButton::clicked, this, &SettingsDialog::onDeleteClicked);
     connect(m_btnSetActive, &DPushButton::clicked, this, &SettingsDialog::onSetActiveClicked);
+    connect(m_btnTest, &DPushButton::clicked, this, &SettingsDialog::onTestClicked);
 
     if (!m_configs.isEmpty()) {
         m_listView->setCurrentIndex(m_model->index(0, 0));
@@ -228,4 +236,57 @@ QList<ProviderConfig> SettingsDialog::configs() const {
 
 QString SettingsDialog::activeProvider() const {
     return m_activeProvider;
+}
+
+ProviderConfig SettingsDialog::currentConfig() const {
+    int row = currentRow();
+    if (row >= 0 && row < m_configs.size()) {
+        return m_configs[row];
+    }
+    return {};
+}
+
+void SettingsDialog::onTestClicked() {
+    ProviderConfig cfg = currentConfig();
+    if (cfg.id.isEmpty()) {
+        m_statusLabel->setText("请先选择一个厂商");
+        return;
+    }
+    if (cfg.apiKey.isEmpty()) {
+        m_statusLabel->setText("请先填写 API Key");
+        return;
+    }
+    if (cfg.apiBase.isEmpty()) {
+        m_statusLabel->setText("请先填写 Base URL");
+        return;
+    }
+
+    m_statusLabel->setText("正在测试连接...");
+    m_btnTest->setEnabled(false);
+
+    auto* testProvider = new OpenAiCompatibleProvider(this);
+    testProvider->setId(cfg.id);
+    testProvider->setDisplayName(cfg.displayName);
+    testProvider->setApiBase(cfg.apiBase);
+    testProvider->setApiKey(cfg.apiKey);
+    testProvider->setModel(cfg.model);
+
+    AiRequest req;
+    req.systemPrompt = "你是一个测试助手。";
+    req.prompt = "你好，请回复'连接成功'四个字。";
+    req.maxTokens = 50;
+
+    testProvider->chat(req,
+        [this](const AiChunk&) {},
+        [this, testProvider](const AiResult& result) {
+            m_btnTest->setEnabled(true);
+            m_statusLabel->setText(QString("✓ 连接成功：%1").arg(result.text.left(30)));
+            testProvider->deleteLater();
+        },
+        [this, testProvider](const QString& err) {
+            m_btnTest->setEnabled(true);
+            m_statusLabel->setText(QString("✗ 连接失败：%1").arg(err));
+            testProvider->deleteLater();
+        }
+    );
 }

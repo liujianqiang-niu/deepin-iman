@@ -12,9 +12,15 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     m_titleLabel->setStyleSheet("font-weight: bold; font-size: 14px;");
     mainLayout->addWidget(m_titleLabel);
 
+    m_modelLabel = new DLabel("当前模型：未配置", this);
+    mainLayout->addWidget(m_modelLabel);
+
     m_providerCombo = new DComboBox(this);
     connect(m_providerCombo, &DComboBox::currentIndexChanged, this, [this](int idx) {
-        if (idx >= 0) emit providerChanged(m_providerCombo->itemData(idx).toString());
+        if (idx >= 0) {
+            m_currentProviderName = m_providerCombo->itemText(idx);
+            emit providerChanged(m_providerCombo->itemData(idx).toString());
+        }
     });
     mainLayout->addWidget(m_providerCombo);
 
@@ -69,6 +75,13 @@ void AiChatWidget::appendMessage(const QString& role, const QString& content) {
     m_chatDisplay->append(msg);
 }
 
+void AiChatWidget::appendAiResult(const QString& role, const QString& content, const QString& model) {
+    QString color = (role == "AI") ? "#0066cc" : "#333333";
+    QString modelTag = model.isEmpty() ? "" : QString(" <span style='color:#999; font-size:11px;'>[%1]</span>").arg(model.toHtmlEscaped());
+    QString msg = QString("<p><b style='color:%1;'>%2:</b>%3 %4</p>").arg(color, role, modelTag, content);
+    m_chatDisplay->append(msg);
+}
+
 void AiChatWidget::setProviderList(const QStringList& ids, const QStringList& displayNames) {
     m_providerCombo->clear();
     for (int i = 0; i < ids.size(); ++i) {
@@ -80,8 +93,19 @@ void AiChatWidget::setActiveProvider(const QString& id) {
     for (int i = 0; i < m_providerCombo->count(); ++i) {
         if (m_providerCombo->itemData(i).toString() == id) {
             m_providerCombo->setCurrentIndex(i);
+            m_currentProviderName = m_providerCombo->itemText(i);
             break;
         }
+    }
+}
+
+void AiChatWidget::setProviderModelInfo(const QString& displayName, const QString& model) {
+    m_currentProviderName = displayName;
+    m_currentModel = model;
+    if (!model.isEmpty()) {
+        m_modelLabel->setText(QString("当前模型：%1 / %2").arg(displayName, model));
+    } else {
+        m_modelLabel->setText(QString("当前模型：%1").arg(displayName));
     }
 }
 

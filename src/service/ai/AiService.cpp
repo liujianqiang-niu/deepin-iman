@@ -16,13 +16,13 @@ AiService::AiService(QObject* parent) : QObject(parent) {
 QList<ProviderConfig> AiService::defaultProviderConfigs() {
     return {
         {"openai", "OpenAI",
-         "https://api.openai.com/v1/chat/completions", "", "gpt-4o"},
+         "https://api.openai.com/v1", "", "gpt-4o"},
         {"glm", "智谱 GLM",
-         "https://open.bigmodel.cn/api/paas/v4/chat/completions", "", "glm-4-plus"},
+         "https://open.bigmodel.cn/api/paas/v4", "", "glm-4-plus"},
         {"qwen", "通义千问",
-         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "", "qwen-max"},
+         "https://dashscope.aliyuncs.com/compatible-mode/v1", "", "qwen-max"},
         {"deepseek", "DeepSeek",
-         "https://api.deepseek.com/v1/chat/completions", "", "deepseek-chat"},
+         "https://api.deepseek.com/v1", "", "deepseek-chat"},
     };
 }
 

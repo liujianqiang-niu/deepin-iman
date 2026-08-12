@@ -31,12 +31,14 @@ private slots:
     void onAddClicked();
     void onDeleteClicked();
     void onSetActiveClicked();
+    void onTestClicked();
 
 private:
     void updateListDisplay();
     void populateFields(int row);
     void clearFields();
     int currentRow() const;
+    ProviderConfig currentConfig() const;
 
     DListView* m_listView;
     QStandardItemModel* m_model;
@@ -47,6 +49,8 @@ private:
     DPushButton* m_btnAdd;
     DPushButton* m_btnDelete;
     DPushButton* m_btnSetActive;
+    DPushButton* m_btnTest;
+    DLabel* m_statusLabel;
 
     QList<ProviderConfig> m_configs;
     QString m_activeProvider;

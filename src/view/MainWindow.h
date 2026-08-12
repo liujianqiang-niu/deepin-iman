@@ -69,4 +69,5 @@ private:
 
     void openPage(const QString& name, int section);
     void updateNavButtons();
+    void updateAiModelInfo();
 };

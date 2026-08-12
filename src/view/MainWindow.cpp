@@ -95,6 +95,7 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     for (const auto& id : ids) names << m_aiSvc->providerDisplayName(id);
     m_aiPanel->setProviderList(ids, names);
     m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
+    updateAiModelInfo();
 
     connect(m_sidebar, &LeftSidebar::searchRequested, this, &MainWindow::onSearchRequested);
     connect(m_sidebar, &LeftSidebar::pageSelected, this, &MainWindow::onPageSelected);
@@ -102,6 +103,9 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     connect(m_manSvc, &ManService::pageRendered, this, &MainWindow::onPageRendered);
 
     connect(m_aiPanel, &AiChatWidget::providerChanged, m_aiSvc, &AiService::setActiveProvider);
+    connect(m_aiPanel, &AiChatWidget::providerChanged, this, [this](const QString&) {
+        updateAiModelInfo();
+    });
     connect(m_aiPanel, &AiChatWidget::translateRequested, this, &MainWindow::onTranslateRequested);
     connect(m_aiPanel, &AiChatWidget::examplesRequested, this, &MainWindow::onExamplesRequested);
     connect(m_aiPanel, &AiChatWidget::questionAsked, this, &MainWindow::onQuestionAsked);
@@ -188,6 +192,7 @@ void MainWindow::onOpenSettings() {
         for (const auto& id : ids) names << m_aiSvc->providerDisplayName(id);
         m_aiPanel->setProviderList(ids, names);
         m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
+        updateAiModelInfo();
     }
 }
 
@@ -208,7 +213,8 @@ void MainWindow::onTranslateRequested(const ManPage& page) {
     m_aiPanel->appendMessage("系统", "正在翻译 " + page.name + "...");
     m_trSvc->getTranslation(page,
         [this, page](const QString& result) {
-            m_aiPanel->appendMessage("AI", result.left(500) + (result.length() > 500 ? "..." : ""));
+            QString model = m_aiSvc->activeProviderPtr() ? m_aiSvc->activeProviderPtr()->model() : "";
+            m_aiPanel->appendAiResult("AI", result.left(500) + (result.length() > 500 ? "..." : ""), model);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -220,7 +226,8 @@ void MainWindow::onExamplesRequested(const ManPage& page) {
     auto* exampleSvc = new ExampleService(m_aiSvc, this);
     exampleSvc->generateExamples(page,
         [this](const QString& result) {
-            m_aiPanel->appendMessage("AI", result);
+            QString model = m_aiSvc->activeProviderPtr() ? m_aiSvc->activeProviderPtr()->model() : "";
+            m_aiPanel->appendAiResult("AI", result, model);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -234,7 +241,7 @@ void MainWindow::onQuestionAsked(const ManPage& page, const QString& question) {
             Q_UNUSED(chunk);
         },
         [this](const AiResult& result) {
-            m_aiPanel->appendMessage("AI", result.text);
+            m_aiPanel->appendAiResult("AI", result.text, result.model);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -248,5 +255,14 @@ void MainWindow::onParseCommandRequested(const QString& cmdline) {
         openPage(cmd, 1);
     } else {
         m_aiPanel->appendMessage("错误", "无法解析命令");
+    }
+}
+
+void MainWindow::updateAiModelInfo() {
+    auto* p = m_aiSvc->activeProviderPtr();
+    if (p) {
+        m_aiPanel->setProviderModelInfo(p->displayName(), p->model());
+    } else {
+        m_aiPanel->setProviderModelInfo("未配置", "");
     }
 }

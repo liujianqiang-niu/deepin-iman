@@ -16,11 +16,17 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
                                      std::function<void(const AiResult&)> onDone,
                                      std::function<void(const QString&)> onError) {
     if (!isConfigured()) {
-        onError(QString("%1 未配置，请检查 API 地址和 API Key").arg(m_displayName));
+        onError(QString("%1 未配置，请检查 Base URL 和 API Key").arg(m_displayName));
         return;
     }
 
-    QNetworkRequest request{QUrl(m_apiBase)};
+    QString url = m_apiBase;
+    if (!url.endsWith("/chat/completions")) {
+        if (url.endsWith("/")) url.chop(1);
+        url += "/chat/completions";
+    }
+
+    QNetworkRequest request{QUrl(url)};
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", ("Bearer " + m_apiKey).toUtf8());
 

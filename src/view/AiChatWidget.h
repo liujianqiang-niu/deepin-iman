@@ -19,8 +19,10 @@ public:
 
     void setCurrentPage(const ManPage& page);
     void appendMessage(const QString& role, const QString& content);
+    void appendAiResult(const QString& role, const QString& content, const QString& model);
     void setProviderList(const QStringList& ids, const QStringList& displayNames);
     void setActiveProvider(const QString& id);
+    void setProviderModelInfo(const QString& displayName, const QString& model);
 
 signals:
     void providerChanged(const QString& id);
@@ -37,6 +39,7 @@ private slots:
 
 private:
     DLabel* m_titleLabel;
+    DLabel* m_modelLabel;
     DComboBox* m_providerCombo;
     DTextEdit* m_chatDisplay;
     DTextEdit* m_inputEdit;
@@ -46,6 +49,8 @@ private:
     DPushButton* m_btnParse;
     DProgressBar* m_progressBar;
 
+    QString m_currentModel;
+    QString m_currentProviderName;
     ManPage m_currentPage;
     bool m_hasPage = false;
 };
