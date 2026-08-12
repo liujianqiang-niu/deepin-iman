@@ -182,6 +182,29 @@ QList<ManPage> ManIndex::findByName(const QString& name) const {
     return results;
 }
 
+QList<ManPage> ManIndex::findByNameLike(const QString& pattern) const {
+    QList<ManPage> results;
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.prepare("SELECT id, name, section, section_name, source_path, title, "
+              "source_mtime, indexed_at FROM man_page WHERE name LIKE ? "
+              "ORDER BY name, section LIMIT 50");
+    q.addBindValue("%" + pattern + "%");
+    if (!q.exec()) return results;
+    while (q.next()) {
+        ManPage p;
+        p.id = q.value(0).toInt();
+        p.name = q.value(1).toString();
+        p.section = q.value(2).toInt();
+        p.sectionName = q.value(3).toString();
+        p.sourcePath = q.value(4).toString();
+        p.title = q.value(5).toString();
+        p.sourceMtime = q.value(6).toLongLong();
+        p.indexedAt = q.value(7).toLongLong();
+        results << p;
+    }
+    return results;
+}
+
 ManPage ManIndex::findById(int id) const {
     ManPage p;
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));

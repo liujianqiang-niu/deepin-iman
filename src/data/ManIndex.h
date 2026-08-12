@@ -28,6 +28,7 @@ public:
     int pageCount() const;
 
     QList<ManPage> findByName(const QString& name) const;
+    QList<ManPage> findByNameLike(const QString& pattern) const;
     ManPage findById(int id) const;
     QList<ManPage> fullTextSearch(const QString& query, int limit = 20) const;
 

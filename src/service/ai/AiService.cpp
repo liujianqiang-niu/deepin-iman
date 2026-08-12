@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QDebug>
 #include <QUuid>
+#include <QProcess>
 
 AiService::AiService(QObject* parent) : QObject(parent) {
 }
@@ -180,14 +181,28 @@ void AiService::callAi(const QString& systemPrompt, const QString& userPrompt,
     p->chat(req, onChunk, onDone, onError);
 }
 
-void AiService::translatePage(const ManPage& page,
+void AiService::translatePage(const ManPage& page, const QString& targetLang,
                                std::function<void(const AiChunk&)> onChunk,
                                std::function<void(const AiResult&)> onDone,
                                std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("translate");
-    QString user = QString("请将以下 man 手册页翻译为中文，保留所有 man 结构标记（.SH/.SS/.TP 等）：\n\n"
-                           "命令：%1(%2)\n\n%3")
-                       .arg(page.name).arg(page.section).arg(page.title);
+    QString langName = targetLang.isEmpty() ? "中文" : targetLang;
+
+    QString manText;
+    if (!page.sourcePath.isEmpty()) {
+        QProcess p;
+        p.start("mandoc", {"-Ttxt", page.sourcePath});
+        if (p.waitForFinished(5000) && p.exitCode() == 0) {
+            manText = QString::fromUtf8(p.readAllStandardOutput());
+        }
+    }
+    if (manText.isEmpty()) manText = page.title;
+
+    if (manText.length() > 8000) manText = manText.left(8000) + "\n\n[...内容过长，已截断...]";
+
+    QString user = QString("请将以下 man 手册页翻译为%1，保留所有 man 结构标记（.SH/.SS/.TP 等）：\n\n"
+                           "命令：%2(%3)\n\n%4")
+                       .arg(langName).arg(page.name).arg(page.section).arg(manText);
     callAi(sys, user, onChunk, onDone, onError);
 }
 

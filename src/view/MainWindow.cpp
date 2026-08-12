@@ -209,9 +209,9 @@ void MainWindow::onToggleFavorite() {
     }
 }
 
-void MainWindow::onTranslateRequested(const ManPage& page) {
-    m_aiPanel->appendMessage("系统", "正在翻译 " + page.name + "...");
-    m_trSvc->getTranslation(page,
+void MainWindow::onTranslateRequested(const ManPage& page, const QString& targetLang) {
+    m_aiPanel->appendMessage("系统", QString("正在翻译 %1 为%2...").arg(page.name).arg(targetLang));
+    m_trSvc->getTranslation(page, targetLang,
         [this, page](const QString& result) {
             QString model = m_aiSvc->activeProviderPtr() ? m_aiSvc->activeProviderPtr()->model() : "";
             m_aiPanel->appendAiResult("AI", result.left(500) + (result.length() > 500 ? "..." : ""), model);
@@ -250,12 +250,19 @@ void MainWindow::onQuestionAsked(const ManPage& page, const QString& question) {
 
 void MainWindow::onParseCommandRequested(const QString& cmdline) {
     QString cmd = m_aiSvc->parseCommandQuick(cmdline);
-    if (!cmd.isEmpty()) {
-        m_aiPanel->appendMessage("系统", "解析命令: " + cmd + "，正在跳转...");
-        openPage(cmd, 1);
-    } else {
+    if (cmd.isEmpty()) {
         m_aiPanel->appendMessage("错误", "无法解析命令");
+        return;
     }
+    auto pages = m_index->findByName(cmd);
+    if (pages.isEmpty()) {
+        m_aiPanel->appendMessage("错误", QString("未找到命令 %1 的 man 手册").arg(cmd));
+        return;
+    }
+    m_aiPanel->appendMessage("系统", QString("解析命令: %1，已找到 %2(%3)，正在跳转...")
+        .arg(cmd).arg(pages.first().name).arg(pages.first().section));
+    openPage(pages.first().name, pages.first().section);
+    m_aiPanel->appendMessage("系统", QString("已跳转到 %1(%2)").arg(pages.first().name).arg(pages.first().section));
 }
 
 void MainWindow::updateAiModelInfo() {

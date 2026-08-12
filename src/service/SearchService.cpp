@@ -10,23 +10,41 @@ SearchService::SearchService(ManIndex* index, QObject* parent)
 
 QList<ManPage> SearchService::search(const QString& query, int limit) const {
     QList<ManPage> results;
-    if (query.trimmed().isEmpty()) return results;
+    QString q = query.trimmed();
+    if (q.isEmpty()) return results;
 
-    auto byName = m_index->findByName(query.trimmed());
     QSet<int> seenIds;
+
+    // 1. 精确匹配
+    auto byName = m_index->findByName(q);
     for (const auto& p : byName) {
         results << p;
         seenIds << p.id;
         if (results.size() >= limit) return results;
     }
 
-    auto fts = m_index->fullTextSearch(query, limit - results.size());
-    for (const auto& p : fts) {
-        if (!seenIds.contains(p.id)) {
-            results << p;
-            seenIds << p.id;
+    // 2. 部分匹配（LIKE）
+    if (results.size() < limit) {
+        auto byLike = m_index->findByNameLike(q);
+        for (const auto& p : byLike) {
+            if (!seenIds.contains(p.id)) {
+                results << p;
+                seenIds << p.id;
+            }
+            if (results.size() >= limit) return results;
         }
-        if (results.size() >= limit) break;
+    }
+
+    // 3. 全文搜索（FTS5）
+    if (results.size() < limit) {
+        auto fts = m_index->fullTextSearch(q, limit - results.size());
+        for (const auto& p : fts) {
+            if (!seenIds.contains(p.id)) {
+                results << p;
+                seenIds << p.id;
+            }
+            if (results.size() >= limit) break;
+        }
     }
     return results;
 }

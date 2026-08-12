@@ -14,7 +14,7 @@ class TranslationService : public QObject {
 public:
     explicit TranslationService(TranslationCache* cache, AiService* ai, QObject* parent = nullptr);
 
-    void getTranslation(const ManPage& page,
+    void getTranslation(const ManPage& page, const QString& targetLang,
                         std::function<void(const QString&)> onReady,
                         std::function<void(const QString&)> onError);
 

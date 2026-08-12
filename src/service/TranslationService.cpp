@@ -29,7 +29,7 @@ QString TranslationService::tryPresetPackage(const ManPage& page) const {
     return QString::fromUtf8(p.readAllStandardOutput());
 }
 
-void TranslationService::getTranslation(const ManPage& page,
+void TranslationService::getTranslation(const ManPage& page, const QString& targetLang,
                                           std::function<void(const QString&)> onReady,
                                           std::function<void(const QString&)> onError) {
     QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime);
@@ -47,7 +47,7 @@ void TranslationService::getTranslation(const ManPage& page,
         return;
     }
 
-    m_ai->translatePage(page,
+    m_ai->translatePage(page, targetLang,
         [this, pageHash](const AiChunk& chunk) { Q_UNUSED(chunk); },
         [this, pageHash, onReady](const AiResult& result) {
             m_cache->put(pageHash, result.text, "ai-" + result.model, result.model);

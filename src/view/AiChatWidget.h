@@ -26,7 +26,7 @@ public:
 
 signals:
     void providerChanged(const QString& id);
-    void translateRequested(const ManPage& page);
+    void translateRequested(const ManPage& page, const QString& targetLang);
     void examplesRequested(const ManPage& page);
     void questionAsked(const ManPage& page, const QString& question);
     void parseCommandRequested(const QString& cmdline);
@@ -41,6 +41,7 @@ private:
     DLabel* m_titleLabel;
     DLabel* m_modelLabel;
     DComboBox* m_providerCombo;
+    DComboBox* m_langCombo;
     DTextEdit* m_chatDisplay;
     DTextEdit* m_inputEdit;
     DPushButton* m_btnTranslate;

@@ -2,6 +2,7 @@
 #pragma once
 #include <DWidget>
 #include <QTextEdit>
+#include <QLineEdit>
 
 DWIDGET_USE_NAMESPACE
 
@@ -15,5 +16,6 @@ public:
 
 private:
     QTextEdit* m_outputView;
+    QLineEdit* m_inputEdit;
     void runViaQProcess(const QString& cmd);
 };
