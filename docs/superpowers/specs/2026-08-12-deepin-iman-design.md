@@ -70,7 +70,7 @@ deepin-iman 是一款面向 deepin v25 桌面的 man 手册浏览器，核心价
 ### 2.2 三条铁律
 
 1. **异步纪律** — AI 调用、首次索引、翻译均走 `QtConcurrent::run` + 信号回主线程，禁止阻塞 UI 线程
-2. **接口隔离** — Service 之间经抽象接口（`IAiProvider`、`ITranslationSource`）通信，不直接依赖具体实现，便于未来拆分
+2. **接口隔离** — Service 之间经抽象接口（`IAiProvider`）通信，不直接依赖具体实现，便于未来拆分或替换供应商
 3. **500 行上限** — 每个 Service 单 .h/.cpp，超过即拆分（AGENTS.md 硬要求）
 
 ### 2.3 数据流总览
@@ -127,7 +127,7 @@ UI 层更新 ← Service 层信号 ← Data 层 / AI Provider
 | 导航/收藏/历史 | `DTreeView` / `DListView` + `DStandardItemModel` | 树形/列表 |
 | man 内容 | `QTextBrowser` (首选) | 零额外依赖，支持 `setHtml` + `anchorClicked` |
 | AI 对话 | `DTextEdit` + 自绘气泡 | QPainter 绘制消息 |
-| 终端 | `QTermWidget` (若可用) 或 QProcess + DTextEdit | 降级方案见第 8.2 节 |
+| 终端 | `QTermWidget` (若可用) 或 QProcess + DTextEdit | 降级方案见第 9.2 节 |
 | 设置 | `DDialog` + `DLineEdit` / `DComboBox` | API key 等配置 |
 | 颜色/字体 | `DApplicationHelper` + `DPalette` | 跟随系统主题 |
 
@@ -176,7 +176,7 @@ CREATE VIRTUAL TABLE man_fts USING fts5(
 
 ```sql
 CREATE TABLE translation (
-    page_hash TEXT PRIMARY KEY,   -- SHA256(name+section+content_version)
+    page_hash TEXT PRIMARY KEY,   -- SHA256(name + section + source_mtime)
     zh_text TEXT NOT NULL,         -- 完整中文译文
     source TEXT NOT NULL,          -- 'preset' | 'ai-openai' | 'ai-claude'...
     model TEXT,                    -- AI 来源时记录模型名
@@ -184,6 +184,8 @@ CREATE TABLE translation (
     quality TEXT DEFAULT 'draft'   -- 'draft' | 'reviewed'
 );
 ```
+
+**page_hash 计算**：`SHA256(name + ":" + section + ":" + source_mtime)`，其中 `source_mtime` 取自 `man_page.source_mtime`。man 源更新时 mtime 变化 → page_hash 变化 → 旧缓存自然失效（保留但不命中），新翻译生成新 hash 记录。
 
 **缓存策略**：
 - 预置包覆盖的页 `source='preset'`，永不失效
@@ -288,7 +290,7 @@ public:
 |--------|------|----------|----------|
 | OpenAI | `OpenAiProvider` | `https://api.openai.com/v1/chat/completions` | SSE |
 | Claude | `ClaudeProvider` | `https://api.anthropic.com/v1/messages` | SSE |
-| 通义千问 | `QwenProvider` | `https://dashscope.aliyuncs.com/...` | SSE |
+| 通义千问 | `QwenProvider` | `https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation` | SSE |
 | 智谱 GLM | `GlmProvider` | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | SSE |
 
 每个供应商封装 `QNetworkAccessManager` 的 HTTP POST + SSE 流式解析。每个 .cpp <300 行。
@@ -299,19 +301,36 @@ public:
 class AiService : public QObject {
     Q_OBJECT
 public:
-    // 四类任务，每类有独立 prompt 模板
+    // 四类任务，每类有独立 prompt 模板，全部异步 (遵循铁律 2.2)
     void translatePage(const ManPage& page,
                        std::function<void(const AiChunk&)> onChunk,
                        std::function<void(const AiResult&)> onDone,
                        std::function<void(const QString&)> onError);
     void generateExamples(const ManPage& page, ...);
     void askQuestion(const ManPage& ctx, const QString& question, ...);
-    QString parseCommand(const QString& cmdline);  // 同步快速解析
+
+    // 命令解析: 两阶段
+    // 阶段1 (同步, 本地启发式): 快速提取管道中第一个命令名, 用于即时跳转
+    //   如 "ls -la | grep foo" → "ls" (跳转 ls(1))
+    QString parseCommandQuick(const QString& cmdline);
+
+    // 阶段2 (异步, AI 深度解析): 解析完整命令结构, 解释管道/重定向/子shell
+    //   返回结构化结果, 含每个命令的自然语言解释
+    void parseCommandDeep(const QString& cmdline,
+                          std::function<void(const AiChunk&)> onChunk,
+                          std::function<void(const AiResult&)> onDone,
+                          std::function<void(const QString&)> onError);
 
     void setActiveProvider(const QString& id);
     void cancelCurrentTask();
 };
 ```
+
+**命令解析两阶段设计**：
+- **parseCommandQuick** (同步, 本地): 用正则/启发式提取首个命令名，零延迟跳转到 man 页。覆盖 90% 简单场景。
+- **parseCommandDeep** (异步, AI): 解析完整命令结构（管道、重定向、子 shell），为每个子命令生成自然语言解释。覆盖复杂场景，流式返回。
+
+这避免了简单命令也调用 AI 的 token 浪费，同时保留 AI 对复杂命令的深度解析能力。
 
 ### 5.4 Prompt 模板
 
