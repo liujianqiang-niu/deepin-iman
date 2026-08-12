@@ -19,6 +19,9 @@ set(APP_SOURCES
     src/data/ManIndex.cpp
     src/service/ManService.cpp
     src/service/SearchService.cpp
+    src/view/MainWindow.cpp
+    src/view/LeftSidebar.cpp
+    src/view/ManView.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES})
