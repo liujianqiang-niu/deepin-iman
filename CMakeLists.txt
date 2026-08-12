@@ -15,6 +15,8 @@ enable_testing()
 # Sources added incrementally as tasks progress
 set(APP_SOURCES
     src/main.cpp
+    src/data/SettingsStore.cpp
+    src/data/ManIndex.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES})
@@ -53,3 +55,17 @@ add_executable(TestSettingsStore tests/TestSettingsStore.cpp src/data/SettingsSt
 target_link_libraries(TestSettingsStore PRIVATE Qt6::Core Qt6::Test)
 target_include_directories(TestSettingsStore PRIVATE src src/data ${CMAKE_CURRENT_BINARY_DIR})
 add_test(NAME TestSettingsStore COMMAND TestSettingsStore)
+
+# TestManIndex
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TestManIndex.moc
+    COMMAND ${MOC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/TestManIndex.cpp
+            -o ${CMAKE_CURRENT_BINARY_DIR}/TestManIndex.moc
+    DEPENDS tests/TestManIndex.cpp
+    VERBATIM
+)
+add_executable(TestManIndex tests/TestManIndex.cpp src/data/ManIndex.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TestManIndex.moc)
+target_link_libraries(TestManIndex PRIVATE Qt6::Core Qt6::Sql Qt6::Test)
+target_include_directories(TestManIndex PRIVATE src src/data ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME TestManIndex COMMAND TestManIndex)
