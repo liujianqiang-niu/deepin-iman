@@ -1,0 +1,7 @@
+build/
+obj-*/
+*.o
+*.moc
+*.qm
+*.user
+.DS_Store

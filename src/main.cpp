@@ -20,8 +20,15 @@ DWIDGET_USE_NAMESPACE
 #include "view/MainWindow.h"
 #include "data/ManIndex.h"
 #include "data/SettingsStore.h"
+#include "data/TranslationCache.h"
+#include "data/FavoriteDb.h"
+#include "data/HistoryDb.h"
 #include "service/ManService.h"
 #include "service/SearchService.h"
+#include "service/ai/AiService.h"
+#include "service/TranslationService.h"
+#include "service/FavoriteService.h"
+#include "service/HistoryService.h"
 
 int main(int argc, char* argv[]) {
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
@@ -54,7 +61,6 @@ int main(int argc, char* argv[]) {
     tsSearchPaths << appDir.absoluteFilePath("../share/deepin-iman/translations");
     tsSearchPaths << appDir.absoluteFilePath("translations");
     tsSearchPaths << ":/translations";
-
     for (const auto& dir : tsSearchPaths) {
         if (translator.load("deepin_iman_" + locale, dir)) {
             app.installTranslator(&translator);
@@ -67,12 +73,11 @@ int main(int argc, char* argv[]) {
     whichProc.waitForFinished();
     if (whichProc.exitCode() != 0) {
         DDialog dlg;
-        dlg.setWindowTitle(QObject::tr("mandoc not installed"));
-        dlg.setMessage(QObject::tr(
-            "deepin-iman requires mandoc to render man pages.\n"
-            "Please install it with:\n\n  sudo apt install mandoc\n\n"
-            "Then restart deepin-iman."));
-        dlg.addButton(QObject::tr("Exit"), false, DDialog::ButtonRecommend);
+        dlg.setWindowTitle("mandoc 未安装");
+        dlg.setMessage("deepin-iman 需要 mandoc 来渲染 man 手册。\n"
+                        "请通过以下命令安装：\n\n  sudo apt install mandoc\n\n"
+                        "然后重新启动 deepin-iman。");
+        dlg.addButton("退出", false, DDialog::ButtonRecommend);
         dlg.exec();
         return 1;
     }
@@ -86,14 +91,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    MainWindow* w = nullptr;
     if (index.pageCount() == 0) {
         DDialog progressDlg;
-        progressDlg.setWindowTitle(QObject::tr("Indexing man pages..."));
+        progressDlg.setWindowTitle("正在索引 man 手册...");
         auto* progressBar = new DProgressBar;
         progressBar->setRange(0, 100);
         progressBar->setValue(0);
-        auto* label = new DLabel(QObject::tr("Scanning man pages, please wait..."));
+        auto* label = new DLabel("正在扫描 man 手册，请稍候...");
         auto* layout = new QVBoxLayout;
         layout->addWidget(label);
         layout->addWidget(progressBar);
@@ -120,10 +124,26 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    AiService aiService;
+    aiService.initializeProviders();
+
+    TranslationCache trCache(dataDir + "/translation.db");
+    trCache.open();
+    TranslationService trService(&trCache, &aiService);
+
+    FavoriteDb favDb(dataDir + "/favorite.db");
+    favDb.open();
+    FavoriteService favService(&favDb);
+
+    HistoryDb histDb(dataDir + "/history.db");
+    histDb.open();
+    HistoryService histService(&histDb);
+
     ManService manService;
     SearchService searchService(&index);
-    w = new MainWindow(&index, &searchService, &manService);
-    w->show();
+    MainWindow w(&index, &searchService, &manService, &aiService, &trService,
+                 &favService, &histService);
+    w.show();
 
     return app.exec();
 }

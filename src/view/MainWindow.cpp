@@ -2,9 +2,17 @@
 #include "MainWindow.h"
 #include "LeftSidebar.h"
 #include "ManView.h"
+#include "AiChatWidget.h"
+#include "TerminalPanel.h"
+#include "SettingsDialog.h"
 #include "data/ManIndex.h"
 #include "service/SearchService.h"
 #include "service/ManService.h"
+#include "service/ai/AiService.h"
+#include "service/TranslationService.h"
+#include "service/ExampleService.h"
+#include "service/FavoriteService.h"
+#include "service/HistoryService.h"
 #include <DTitlebar>
 #include <DDialog>
 #include <QMenu>
@@ -12,22 +20,27 @@
 #include <QSplitter>
 #include <QShortcut>
 #include <QIcon>
+#include <QSettings>
 
-MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc, QWidget* parent)
-    : DMainWindow(parent), m_index(index), m_searchSvc(searchSvc), m_manSvc(manSvc)
+MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
+                       AiService* aiSvc, TranslationService* trSvc,
+                       FavoriteService* favSvc, HistoryService* histSvc,
+                       QWidget* parent)
+    : DMainWindow(parent), m_index(index), m_searchSvc(searchSvc), m_manSvc(manSvc),
+      m_aiSvc(aiSvc), m_trSvc(trSvc), m_favSvc(favSvc), m_histSvc(histSvc)
 {
-    setWindowTitle(tr("deepin man 手册"));
+    setWindowTitle("deepin man 手册");
     setWindowIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
 
     auto* titlebar = this->titlebar();
     if (titlebar) {
         titlebar->setIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
-        titlebar->setTitle(tr("deepin man 手册"));
+        titlebar->setTitle("deepin man 手册");
 
         m_btnPrev = new DIconButton(DStyle::SP_ArrowLeft, titlebar);
         m_btnNext = new DIconButton(DStyle::SP_ArrowRight, titlebar);
-        m_btnPrev->setToolTip(tr("后退"));
-        m_btnNext->setToolTip(tr("前进"));
+        m_btnPrev->setToolTip("后退");
+        m_btnNext->setToolTip("前进");
         m_btnPrev->setEnabled(false);
         m_btnNext->setEnabled(false);
         titlebar->addWidget(m_btnPrev, Qt::AlignLeft);
@@ -40,38 +53,71 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
             menu = new QMenu(titlebar);
             titlebar->setMenu(menu);
         }
-        auto* helpMenu = menu->addMenu(tr("帮助"));
-        auto* aboutAction = helpMenu->addAction(tr("关于"));
+        auto* settingsAction = menu->addAction("AI 设置");
+        connect(settingsAction, &QAction::triggered, this, &MainWindow::onOpenSettings);
+        auto* terminalAction = menu->addAction("终端");
+        terminalAction->setCheckable(true);
+        connect(terminalAction, &QAction::toggled, this, &MainWindow::onToggleTerminal);
+        auto* favAction = menu->addAction("收藏当前页");
+        connect(favAction, &QAction::triggered, this, &MainWindow::onToggleFavorite);
+        menu->addSeparator();
+        auto* helpMenu = menu->addMenu("帮助");
+        auto* aboutAction = helpMenu->addAction("关于");
         connect(aboutAction, &QAction::triggered, this, [this]() {
             DDialog dlg(this);
-            dlg.setWindowTitle(tr("关于 deepin man 手册"));
-            dlg.setMessage(tr("deepin man 手册 v0.1.0\n\n"
-                              "AI 驱动的 man 手册查看器\n\n"
-                              "开发者：liujianqiang@uniontech.com\n"
-                              "许可证：LGPL-2.1+"));
-            dlg.addButton(tr("确定"), true, DDialog::ButtonRecommend);
+            dlg.setWindowTitle("关于 deepin man 手册");
+            dlg.setMessage("deepin man 手册 v0.1.0\n\n"
+                          "AI 驱动的 man 手册查看器\n\n"
+                          "开发者：liujianqiang@uniontech.com\n"
+                          "许可证：LGPL-2.1+");
+            dlg.addButton("确定", true, DDialog::ButtonRecommend);
             dlg.exec();
         });
     }
 
-    auto* splitter = new QSplitter(Qt::Horizontal, this);
+    auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
 
     m_sidebar = new LeftSidebar;
     m_manView = new ManView;
+    m_aiPanel = new AiChatWidget;
 
-    splitter->addWidget(m_sidebar);
-    splitter->addWidget(m_manView);
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
-    splitter->setSizes({240, 800});
+    mainSplitter->addWidget(m_sidebar);
+    mainSplitter->addWidget(m_manView);
+    mainSplitter->addWidget(m_aiPanel);
+    mainSplitter->setStretchFactor(0, 0);
+    mainSplitter->setStretchFactor(1, 1);
+    mainSplitter->setStretchFactor(2, 0);
+    mainSplitter->setSizes({240, 700, 360});
 
-    setCentralWidget(splitter);
-    resize(1200, 800);
+    auto* outerSplitter = new QSplitter(Qt::Vertical, this);
+    outerSplitter->addWidget(mainSplitter);
+
+    m_terminal = new TerminalPanel;
+    m_terminal->setVisible(false);
+    outerSplitter->addWidget(m_terminal);
+    outerSplitter->setStretchFactor(0, 1);
+    outerSplitter->setStretchFactor(1, 0);
+    outerSplitter->setSizes({600, 150});
+
+    setCentralWidget(outerSplitter);
+    resize(1400, 850);
+
+    QStringList ids = m_aiSvc->providerIds();
+    QStringList names;
+    for (const auto& id : ids) names << m_aiSvc->providerDisplayName(id);
+    m_aiPanel->setProviderList(ids, names);
+    m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
 
     connect(m_sidebar, &LeftSidebar::searchRequested, this, &MainWindow::onSearchRequested);
     connect(m_sidebar, &LeftSidebar::pageSelected, this, &MainWindow::onPageSelected);
     connect(m_manView, &ManView::crossReferenceClicked, this, &MainWindow::onCrossRefClicked);
     connect(m_manSvc, &ManService::pageRendered, this, &MainWindow::onPageRendered);
+
+    connect(m_aiPanel, &AiChatWidget::providerChanged, m_aiSvc, &AiService::setActiveProvider);
+    connect(m_aiPanel, &AiChatWidget::translateRequested, this, &MainWindow::onTranslateRequested);
+    connect(m_aiPanel, &AiChatWidget::examplesRequested, this, &MainWindow::onExamplesRequested);
+    connect(m_aiPanel, &AiChatWidget::questionAsked, this, &MainWindow::onQuestionAsked);
+    connect(m_aiPanel, &AiChatWidget::parseCommandRequested, this, &MainWindow::onParseCommandRequested);
 
     auto* prevSc = new QShortcut(QKeySequence("Alt+Left"), this);
     auto* nextSc = new QShortcut(QKeySequence("Alt+Right"), this);
@@ -100,7 +146,9 @@ void MainWindow::openPage(const QString& name, int section) {
             m_forwardStack.clear();
             m_currentPageId = p.id;
             m_manSvc->renderPageAsync(p.sourcePath);
-            setWindowTitle(tr("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
+            m_aiPanel->setCurrentPage(p);
+            m_histSvc->recordVisit(p.id);
+            setWindowTitle(QString("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
             updateNavButtons();
             return;
         }
@@ -118,7 +166,8 @@ void MainWindow::onPrevPage() {
     ManPage p = m_index->findById(m_currentPageId);
     if (!p.sourcePath.isEmpty()) {
         m_manSvc->renderPageAsync(p.sourcePath);
-        setWindowTitle(tr("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
+        m_aiPanel->setCurrentPage(p);
+        setWindowTitle(QString("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
     }
     updateNavButtons();
 }
@@ -130,7 +179,8 @@ void MainWindow::onNextPage() {
     ManPage p = m_index->findById(m_currentPageId);
     if (!p.sourcePath.isEmpty()) {
         m_manSvc->renderPageAsync(p.sourcePath);
-        setWindowTitle(tr("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
+        m_aiPanel->setCurrentPage(p);
+        setWindowTitle(QString("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
     }
     updateNavButtons();
 }
@@ -138,4 +188,76 @@ void MainWindow::onNextPage() {
 void MainWindow::updateNavButtons() {
     if (m_btnPrev) m_btnPrev->setEnabled(!m_backStack.isEmpty());
     if (m_btnNext) m_btnNext->setEnabled(!m_forwardStack.isEmpty());
+}
+
+void MainWindow::onOpenSettings() {
+    SettingsDialog dlg(this);
+    if (dlg.exec() == DDialog::Accepted) {
+        QString newProvider = dlg.activeProvider();
+        m_aiSvc->setActiveProvider(newProvider);
+        m_aiPanel->setActiveProvider(newProvider);
+        for (const auto& id : m_aiSvc->providerIds()) {
+            m_aiSvc->provider(id)->setApiKey(dlg.apiKey(id));
+        }
+    }
+}
+
+void MainWindow::onToggleTerminal() {
+    m_terminal->toggle();
+}
+
+void MainWindow::onToggleFavorite() {
+    if (m_currentPageId == -1) return;
+    if (m_favSvc->isFavorite(m_currentPageId)) {
+        m_favSvc->remove(m_currentPageId);
+    } else {
+        m_favSvc->add(m_currentPageId, QString(), QString());
+    }
+}
+
+void MainWindow::onTranslateRequested(const ManPage& page) {
+    m_aiPanel->appendMessage("系统", "正在翻译 " + page.name + "...");
+    m_trSvc->getTranslation(page,
+        [this, page](const QString& result) {
+            m_aiPanel->appendMessage("AI", result.left(500) + (result.length() > 500 ? "..." : ""));
+        },
+        [this](const QString& err) {
+            m_aiPanel->appendMessage("错误", err);
+        });
+}
+
+void MainWindow::onExamplesRequested(const ManPage& page) {
+    m_aiPanel->appendMessage("系统", "正在生成 " + page.name + " 使用样例...");
+    auto* exampleSvc = new ExampleService(m_aiSvc, this);
+    exampleSvc->generateExamples(page,
+        [this](const QString& result) {
+            m_aiPanel->appendMessage("AI", result);
+        },
+        [this](const QString& err) {
+            m_aiPanel->appendMessage("错误", err);
+        });
+}
+
+void MainWindow::onQuestionAsked(const ManPage& page, const QString& question) {
+    m_aiPanel->appendMessage("用户", question);
+    m_aiSvc->askQuestion(page, question,
+        [this](const AiChunk& chunk) {
+            Q_UNUSED(chunk);
+        },
+        [this](const AiResult& result) {
+            m_aiPanel->appendMessage("AI", result.text);
+        },
+        [this](const QString& err) {
+            m_aiPanel->appendMessage("错误", err);
+        });
+}
+
+void MainWindow::onParseCommandRequested(const QString& cmdline) {
+    QString cmd = m_aiSvc->parseCommandQuick(cmdline);
+    if (!cmd.isEmpty()) {
+        m_aiPanel->appendMessage("系统", "解析命令: " + cmd + "，正在跳转...");
+        openPage(cmd, 1);
+    } else {
+        m_aiPanel->appendMessage("错误", "无法解析命令");
+    }
 }

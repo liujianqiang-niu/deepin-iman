@@ -14,16 +14,33 @@ find_program(MANDOC_EXECUTABLE mandoc REQUIRED)
 
 enable_testing()
 
-# Sources added incrementally as tasks progress
+# Sources
 set(APP_SOURCES
     src/main.cpp
     src/data/SettingsStore.cpp
     src/data/ManIndex.cpp
+    src/data/TranslationCache.cpp
+    src/data/FavoriteDb.cpp
+    src/data/HistoryDb.cpp
     src/service/ManService.cpp
     src/service/SearchService.cpp
+    src/service/TranslationService.cpp
+    src/service/ExampleService.cpp
+    src/service/FavoriteService.cpp
+    src/service/HistoryService.cpp
+    src/service/ai/AiService.cpp
+    src/service/ai/IAiProvider.cpp
+    src/service/ai/OpenAiProvider.cpp
+    src/service/ai/ClaudeProvider.cpp
+    src/service/ai/QwenProvider.cpp
+    src/service/ai/GlmProvider.cpp
     src/view/MainWindow.cpp
     src/view/LeftSidebar.cpp
     src/view/ManView.cpp
+    src/view/AiChatWidget.cpp
+    src/view/TerminalPanel.cpp
+    src/view/SettingsDialog.cpp
+    src/view/TranslationView.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES} resources.qrc)
@@ -32,6 +49,7 @@ target_include_directories(deepin-iman PRIVATE
     src
     src/data
     src/service
+    src/service/ai
     src/view
 )
 
@@ -44,6 +62,9 @@ target_link_libraries(deepin-iman PRIVATE
     Dtk6::Widget
     Dtk6::Core
 )
+
+# Install prompt templates
+install(DIRECTORY data/prompts DESTINATION share/deepin-iman)
 
 install(TARGETS deepin-iman DESTINATION bin)
 
