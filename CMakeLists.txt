@@ -37,3 +37,19 @@ target_link_libraries(deepin-iman PRIVATE
 )
 
 install(TARGETS deepin-iman DESTINATION bin)
+
+# Tests (added incrementally per task)
+# Manually generate moc for test cpp file (Q_OBJECT class defined in .cpp)
+get_target_property(MOC_EXECUTABLE Qt6::moc LOCATION)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TestSettingsStore.moc
+    COMMAND ${MOC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/TestSettingsStore.cpp
+            -o ${CMAKE_CURRENT_BINARY_DIR}/TestSettingsStore.moc
+    DEPENDS tests/TestSettingsStore.cpp
+    VERBATIM
+)
+add_executable(TestSettingsStore tests/TestSettingsStore.cpp src/data/SettingsStore.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TestSettingsStore.moc)
+target_link_libraries(TestSettingsStore PRIVATE Qt6::Core Qt6::Test)
+target_include_directories(TestSettingsStore PRIVATE src src/data ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME TestSettingsStore COMMAND TestSettingsStore)
