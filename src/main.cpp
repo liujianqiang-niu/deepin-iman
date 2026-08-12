@@ -1,4 +1,5 @@
 // src/main.cpp
+#include <QGuiApplication>
 #include <DApplication>
 #include <DDialog>
 #include <DProgressBar>
@@ -12,6 +13,7 @@
 #include <QTranslator>
 #include <QLocale>
 #include <QtConcurrent/QtConcurrent>
+#include <cstdlib>
 
 DWIDGET_USE_NAMESPACE
 
@@ -22,37 +24,42 @@ DWIDGET_USE_NAMESPACE
 #include "service/SearchService.h"
 
 int main(int argc, char* argv[]) {
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    if (!QString(qgetenv("XDG_CURRENT_DESKTOP")).toLower().startsWith("deepin")) {
+        setenv("XDG_CURRENT_DESKTOP", "Deepin", 1);
+    }
+
     DApplication app(argc, argv);
     app.setOrganizationName("deepin");
     app.setApplicationName("deepin-iman");
     app.setApplicationVersion("0.1.0");
     app.setProductIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
-    app.setProductName(QObject::tr("deepin iman"));
-    app.setApplicationDescription(QObject::tr("AI-powered man page viewer"));
+    app.setProductName("deepin man 手册");
+    app.setApplicationDescription("AI 驱动的 man 手册查看器");
     app.setWindowIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
+
+    QTranslator dtkTranslator;
+    if (dtkTranslator.load(QLocale(), "dtkwidget", "_", "/usr/share/dtk6/DWidget/translations")) {
+        app.installTranslator(&dtkTranslator);
+    }
 
     QTranslator translator;
     QString locale = QLocale::system().name();
-    QString tsDir;
-    QStringList searchPaths = {
+    QStringList tsSearchPaths = {
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/translations",
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/translations",
     };
     QDir appDir(QCoreApplication::applicationDirPath());
-    searchPaths << appDir.absoluteFilePath("../share/deepin-iman/translations");
-    searchPaths << appDir.absoluteFilePath("translations");
+    tsSearchPaths << appDir.absoluteFilePath("../share/deepin-iman/translations");
+    tsSearchPaths << appDir.absoluteFilePath("translations");
+    tsSearchPaths << ":/translations";
 
-    for (const auto& dir : searchPaths) {
-        if (QFile::exists(dir + "/deepin_iman_" + locale + ".qm")) {
-            tsDir = dir;
+    for (const auto& dir : tsSearchPaths) {
+        if (translator.load("deepin_iman_" + locale, dir)) {
+            app.installTranslator(&translator);
             break;
         }
-    }
-    if (tsDir.isEmpty()) {
-        tsDir = ":/translations";
-    }
-    if (translator.load("deepin_iman_" + locale, tsDir)) {
-        app.installTranslator(&translator);
     }
 
     QProcess whichProc;

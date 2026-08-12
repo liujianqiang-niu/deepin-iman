@@ -39,7 +39,24 @@ private slots:
         QString html = svc.renderPage("/usr/share/man/man1/ls.1.gz");
         QVERIFY(!html.isEmpty());
         QVERIFY(html.contains("ls") || html.contains("LS"));
-        QVERIFY(html.contains("class=\"Pp\"") || html.contains("class=\"Sh\""));
+        QVERIFY(!html.contains("class=\"Sh\""));
+        QVERIFY(!html.contains("class=\"Pp\""));
+        QVERIFY(html.contains("<h2>") || html.contains("<h3>"));
+    }
+
+    void testConvertToQtHtml() {
+        ManService svc;
+        QString mandocHtml = "<section class=\"Sh\">"
+                             "<h1 class=\"Sh\" id=\"NAME\"><a class=\"permalink\" href=\"#NAME\">NAME</a></h1>"
+                             "<p class=\"Pp\">test content</p>"
+                             "</section>";
+        QString qtHtml = svc.convertToQtHtml(mandocHtml);
+        QVERIFY(!qtHtml.contains("class="));
+        QVERIFY(!qtHtml.contains("id="));
+        QVERIFY(!qtHtml.contains("<section"));
+        QVERIFY(!qtHtml.contains("permalink"));
+        QVERIFY(qtHtml.contains("<h3>"));
+        QVERIFY(qtHtml.contains("<div>"));
     }
 
     void testRenderProducesCrossRefLinks() {

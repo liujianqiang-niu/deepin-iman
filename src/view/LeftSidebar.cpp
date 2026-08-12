@@ -10,7 +10,7 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_searchEdit = new DSearchEdit(this);
-    m_searchEdit->setPlaceholderText(tr("Search man pages..."));
+    m_searchEdit->setPlaceholderText("搜索 man 手册...");
     connect(m_searchEdit, &DSearchEdit::textChanged, this, [this](const QString& t) {
         if (t.length() >= 2) emit searchRequested(t);
     });
@@ -18,7 +18,7 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
 
     m_navTree = new DTreeView(this);
     m_navModel = new QStandardItemModel(this);
-    m_navModel->setHorizontalHeaderLabels({tr("Command"), tr("Section")});
+    m_navModel->setHorizontalHeaderLabels({"命令", "章节"});
     auto* hdr0 = m_navModel->horizontalHeaderItem(0);
     auto* hdr1 = m_navModel->horizontalHeaderItem(1);
     if (hdr0) hdr0->setIcon(QIcon::fromTheme("text-x-script"));

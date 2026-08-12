@@ -27,7 +27,51 @@ QString ManService::renderPage(const QString& gzPath) {
     }
 
     QString html = QString::fromUtf8(p.readAllStandardOutput());
-    return injectCrossRefLinks(html);
+    html = convertToQtHtml(html);
+    html = injectCrossRefLinks(html);
+    return html;
+}
+
+QString ManService::convertToQtHtml(const QString& mandocHtml) const {
+    QString html = mandocHtml;
+
+    // Remove permalink anchors BEFORE stripping class attributes
+    // mandoc pattern: <a class="permalink" href="#NAME">NAME</a> → NAME
+    html.replace(QRegularExpression("<a[^>]*permalink[^>]*>(.*?)</a>"), "\\1");
+
+    // Strip all class="..." attributes (QTextBrowser ignores CSS classes)
+    html.remove(QRegularExpression("\\s+class=\"[^\"]*\""));
+
+    // Remove <table>...</table> header/footer blocks (title/date duplicate)
+    html.remove(QRegularExpression("<table>\\s*<tr>\\s*<td.*?head-ltitle.*?</table>",
+        QRegularExpression::DotMatchesEverythingOption));
+    html.remove(QRegularExpression("<table>\\s*<tr>\\s*<td.*?foot-date.*?</table>",
+        QRegularExpression::DotMatchesEverythingOption));
+
+    // HTML5 → HTML4 tag conversions
+    html.replace("<section", "<div");
+    html.replace("</section>", "</div>");
+
+    // <h1 class="Sh"> → <h2> (h1 is too large in QTextBrowser)
+    html.replace(QRegularExpression("<h1[^>]*>"), "<h2>");
+    html.replace("</h1>", "</h2>");
+    html.replace(QRegularExpression("<h2[^>]*>"), "<h3>");
+    html.replace("</h2>", "</h3>");
+
+    // <code> → <tt> for better QTextBrowser compat
+    html.replace("<code", "<tt");
+    html.replace("</code>", "</tt>");
+
+    html.replace("<br/>", "<br>");
+
+    // Clean up id="..." attributes and leftover whitespace before >
+    html.remove(QRegularExpression("\\s+id=\"[^\"]*\""));
+    html.replace(QRegularExpression("\\s+>"), ">");
+
+    // Remove empty <div></div> wrappers
+    html.replace(QRegularExpression("<div>\\s*</div>"), "");
+
+    return html.trimmed();
 }
 
 QString ManService::injectCrossRefLinks(const QString& html) const {
