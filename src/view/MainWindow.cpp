@@ -5,6 +5,7 @@
 #include "AiChatWidget.h"
 #include "TerminalPanel.h"
 #include "SettingsDialog.h"
+#include "ResultViewDialog.h"
 #include "data/ManIndex.h"
 #include "service/SearchService.h"
 #include "service/ManService.h"
@@ -23,6 +24,12 @@
 #include <QShortcut>
 #include <QIcon>
 #include <QSettings>
+#include <QEventLoop>
+#include <QTimer>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
 #include <QtConcurrent>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
@@ -65,6 +72,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
         connect(favAction, &QAction::triggered, this, &MainWindow::onToggleFavorite);
         auto* refreshAction = menu->addAction("刷新索引");
         connect(refreshAction, &QAction::triggered, this, &MainWindow::onRefreshIndex);
+        auto* exportAction = menu->addAction("导出 Markdown");
+        connect(exportAction, &QAction::triggered, this, &MainWindow::onExportMarkdown);
         // DTitlebar 内置"关于"菜单项由 DApplication 统一提供，不再重复添加
     }
 
@@ -107,6 +116,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     connect(m_manView, &ManView::crossReferenceClicked, this, &MainWindow::onCrossRefClicked);
     connect(m_manSvc, &ManService::pageRendered, this, &MainWindow::onPageRendered);
 
+    refreshSidebarLists();
+
     connect(m_aiPanel, &AiChatWidget::providerChanged, m_aiSvc, &AiService::setActiveProvider);
     connect(m_aiPanel, &AiChatWidget::providerChanged, this, [this](const QString&) {
         updateAiModelInfo();
@@ -147,6 +158,7 @@ void MainWindow::openPage(const QString& name, int section) {
             m_histSvc->recordVisit(p.id);
             setWindowTitle(QString("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
             updateNavButtons();
+            refreshSidebarLists();
             return;
         }
     }
@@ -209,17 +221,23 @@ void MainWindow::onToggleFavorite() {
     if (m_currentPageId == -1) return;
     if (m_favSvc->isFavorite(m_currentPageId)) {
         m_favSvc->remove(m_currentPageId);
+        m_aiPanel->appendMessage("系统", "已取消收藏");
     } else {
         m_favSvc->add(m_currentPageId, QString(), QString());
+        m_aiPanel->appendMessage("系统", "已收藏当前页");
     }
+    refreshSidebarLists();
 }
 
 void MainWindow::onTranslateRequested(const ManPage& page, const QString& targetLang) {
     m_aiPanel->appendMessage("系统", QString("正在翻译 %1 为%2...").arg(page.name).arg(targetLang));
     m_trSvc->getTranslation(page, targetLang,
-        [this, page](const QString& result) {
-            QString model = m_aiSvc->activeProviderPtr() ? m_aiSvc->activeProviderPtr()->model() : "";
-            m_aiPanel->appendAiResult("AI", result.left(500) + (result.length() > 500 ? "..." : ""), model);
+        [this, page, targetLang](const QString& result) {
+            m_aiPanel->appendMessage("系统", QString("翻译完成，已弹出独立窗口显示。"));
+            QString title = QString("%1(%2) - %3翻译").arg(page.name).arg(page.section).arg(targetLang);
+            auto* dlg = new ResultViewDialog(title, result, this);
+            dlg->exec();
+            dlg->deleteLater();
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -230,9 +248,12 @@ void MainWindow::onExamplesRequested(const ManPage& page) {
     m_aiPanel->appendMessage("系统", "正在生成 " + page.name + " 使用样例...");
     auto* exampleSvc = new ExampleService(m_aiSvc, this);
     exampleSvc->generateExamples(page,
-        [this](const QString& result) {
-            QString model = m_aiSvc->activeProviderPtr() ? m_aiSvc->activeProviderPtr()->model() : "";
-            m_aiPanel->appendAiResult("AI", result, model);
+        [this, page](const QString& result) {
+            m_aiPanel->appendMessage("系统", "样例生成完成，已弹出独立窗口显示。");
+            QString title = QString("%1(%2) - AI 使用样例").arg(page.name).arg(page.section);
+            auto* dlg = new ResultViewDialog(title, result, this);
+            dlg->exec();
+            dlg->deleteLater();
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -279,6 +300,50 @@ void MainWindow::updateAiModelInfo() {
     }
 }
 
+void MainWindow::refreshSidebarLists() {
+    m_sidebar->setFavorites(m_favSvc->list());
+    m_sidebar->setHistory(m_histSvc->recent(50));
+}
+
+void MainWindow::onExportMarkdown() {
+    if (m_currentPageId == -1) {
+        m_aiPanel->appendMessage("系统", "请先打开一个 man 手册");
+        return;
+    }
+    ManPage page = m_index->findById(m_currentPageId);
+    if (page.sourcePath.isEmpty()) {
+        m_aiPanel->appendMessage("错误", "无法获取手册源文件路径");
+        return;
+    }
+
+    QProcess p;
+    p.start("mandoc", {"-Tmarkdown", page.sourcePath});
+    if (!p.waitForFinished(5000) || p.exitCode() != 0) {
+        p.start("mandoc", {"-Tascii", page.sourcePath});
+        if (!p.waitForFinished(5000) || p.exitCode() != 0) {
+            m_aiPanel->appendMessage("错误", "mandoc 转换失败");
+            return;
+        }
+    }
+    QString content = QString::fromUtf8(p.readAllStandardOutput());
+    QString header = QString("# %1(%2)\n\n> 导出自 deepin-iman，%3\n\n").arg(page.name).arg(page.section).arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm"));
+
+    QString defaultName = QString("%1(%2).md").arg(page.name).arg(page.section);
+    QString filePath = QFileDialog::getSaveFileName(this, "导出 Markdown", defaultName, "Markdown 文件 (*.md)");
+    if (filePath.isEmpty()) return;
+
+    QFile f(filePath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        m_aiPanel->appendMessage("错误", "无法写入文件：" + filePath);
+        return;
+    }
+    QTextStream ts(&f);
+    ts.setEncoding(QStringConverter::Utf8);
+    ts << header << content;
+    f.close();
+    m_aiPanel->appendMessage("系统", "已导出到：" + filePath);
+}
+
 void MainWindow::onRefreshIndex() {
     DDialog progressDlg(this);
     progressDlg.setWindowTitle("正在刷新 man 手册索引...");
@@ -293,24 +358,25 @@ void MainWindow::onRefreshIndex() {
     content->setLayout(layout);
     progressDlg.addContent(content);
     progressDlg.setFixedWidth(400);
+    progressDlg.setModal(true);
     progressDlg.show();
 
+    QEventLoop loop;
     connect(m_index, &ManIndex::scanProgress, this, [&](int cur, int total) {
         progressBar->setMaximum(total);
         progressBar->setValue(cur);
         QCoreApplication::processEvents();
     });
-    connect(m_index, &ManIndex::scanFinished, &progressDlg, [&progressDlg, this](int count) {
+    connect(m_index, &ManIndex::scanFinished, this, [&](int) {
         progressDlg.accept();
-        m_aiPanel->appendMessage("系统", QString("索引刷新完成，共 %1 页").arg(m_index->pageCount()));
+        loop.quit();
     });
 
-    QtConcurrent::run([this]() {
+    QTimer::singleShot(0, this, [this]() {
         m_index->refreshManPages("/usr/share/man");
     });
 
-    while (progressDlg.isVisible()) {
-        QCoreApplication::processEvents();
-        QThread::msleep(50);
-    }
+    loop.exec();
+
+    m_aiPanel->appendMessage("系统", QString("索引刷新完成，共 %1 页").arg(m_index->pageCount()));
 }

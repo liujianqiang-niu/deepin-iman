@@ -156,10 +156,16 @@ int ManIndex::scanManPages(const QString& manRoot) {
 
 bool ManIndex::needsUpdate(const QString& manRoot) const {
     QStringList fsFiles = findManFiles(manRoot);
+    int validCount = 0;
+    QRegularExpression re("^(.+)\\.([1-8])\\.gz$");
+    for (const auto& path : fsFiles) {
+        QFileInfo fi(path);
+        if (re.match(fi.fileName()).hasMatch()) ++validCount;
+    }
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.exec("SELECT COUNT(*) FROM man_page");
     int dbCount = q.next() ? q.value(0).toInt() : 0;
-    return fsFiles.size() != dbCount;
+    return validCount != dbCount;
 }
 
 int ManIndex::refreshManPages(const QString& manRoot) {

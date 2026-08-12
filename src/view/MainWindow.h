@@ -42,6 +42,7 @@ private slots:
     void onToggleTerminal();
     void onToggleFavorite();
     void onRefreshIndex();
+    void onExportMarkdown();
     void onTranslateRequested(const ManPage& page, const QString& targetLang);
     void onExamplesRequested(const ManPage& page);
     void onQuestionAsked(const ManPage& page, const QString& question);
@@ -71,4 +72,5 @@ private:
     void openPage(const QString& name, int section);
     void updateNavButtons();
     void updateAiModelInfo();
+    void refreshSidebarLists();
 };
