@@ -17,6 +17,7 @@ set(APP_SOURCES
     src/main.cpp
     src/data/SettingsStore.cpp
     src/data/ManIndex.cpp
+    src/service/ManService.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES})
@@ -69,3 +70,17 @@ add_executable(TestManIndex tests/TestManIndex.cpp src/data/ManIndex.cpp
 target_link_libraries(TestManIndex PRIVATE Qt6::Core Qt6::Sql Qt6::Test)
 target_include_directories(TestManIndex PRIVATE src src/data ${CMAKE_CURRENT_BINARY_DIR})
 add_test(NAME TestManIndex COMMAND TestManIndex)
+
+# TestManService
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TestManService.moc
+    COMMAND ${MOC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/TestManService.cpp
+            -o ${CMAKE_CURRENT_BINARY_DIR}/TestManService.moc
+    DEPENDS tests/TestManService.cpp
+    VERBATIM
+)
+add_executable(TestManService tests/TestManService.cpp src/service/ManService.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TestManService.moc)
+target_link_libraries(TestManService PRIVATE Qt6::Core Qt6::Concurrent Qt6::Test)
+target_include_directories(TestManService PRIVATE src src/service ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME TestManService COMMAND TestManService)
