@@ -102,3 +102,18 @@ add_executable(TestSearchService tests/TestSearchService.cpp src/data/ManIndex.c
 target_link_libraries(TestSearchService PRIVATE Qt6::Core Qt6::Sql Qt6::Test)
 target_include_directories(TestSearchService PRIVATE src src/data src/service ${CMAKE_CURRENT_BINARY_DIR})
 add_test(NAME TestSearchService COMMAND TestSearchService)
+
+# TestIntegration
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TestIntegration.moc
+    COMMAND ${MOC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/TestIntegration.cpp
+            -o ${CMAKE_CURRENT_BINARY_DIR}/TestIntegration.moc
+    DEPENDS tests/TestIntegration.cpp
+    VERBATIM
+)
+add_executable(TestIntegration tests/TestIntegration.cpp
+    src/data/ManIndex.cpp src/service/ManService.cpp src/service/SearchService.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TestIntegration.moc)
+target_link_libraries(TestIntegration PRIVATE Qt6::Core Qt6::Sql Qt6::Concurrent Qt6::Test)
+target_include_directories(TestIntegration PRIVATE src src/data src/service ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME TestIntegration COMMAND TestIntegration)

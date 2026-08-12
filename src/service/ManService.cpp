@@ -32,7 +32,7 @@ QString ManService::renderPage(const QString& gzPath) {
 
     // Parse SEE ALSO section and inject cross-reference links
     QRegularExpression seeAlsoRe(
-        "SEE ALSO.*?\\n(.*?)(?:\\n\\n|\\n[A-Z]})", 
+        "SEE ALSO(?:<br>)?\\n(.*?)(?:<br>\\n<br>\\n|\\n[A-Z][A-Z ]+(?:<br>)?\\n)",
         QRegularExpression::DotMatchesEverythingOption);
     auto match = seeAlsoRe.match(html);
     if (match.hasMatch()) {
