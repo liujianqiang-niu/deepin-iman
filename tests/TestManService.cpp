@@ -25,12 +25,11 @@ private slots:
         QCOMPARE(refs[1].section, 1);
     }
 
-    void testAnsiToHtml() {
+    void testInjectCrossRefLinks() {
         ManService svc;
-        QString input = "\033[1mBOLD\033[0m and \033[4mUNDERLINE\033[24m text";
-        QString html = svc.ansiToHtml(input);
-        QVERIFY(html.contains("<b>BOLD</b>"));
-        QVERIFY(html.contains("<u>UNDERLINE</u>"));
+        QString html = "<p class=\"Pp\"><b>dircolors</b>(1)</p>";
+        QString result = svc.injectCrossRefLinks(html);
+        QVERIFY(result.contains("<a href=\"man:dircolors(1)\">"));
     }
 
     void testRenderRealSystemPage() {
@@ -40,6 +39,22 @@ private slots:
         QString html = svc.renderPage("/usr/share/man/man1/ls.1.gz");
         QVERIFY(!html.isEmpty());
         QVERIFY(html.contains("ls") || html.contains("LS"));
+        QVERIFY(html.contains("class=\"Pp\"") || html.contains("class=\"Sh\""));
+    }
+
+    void testRenderProducesCrossRefLinks() {
+        ManService svc;
+        QFile f("/usr/share/man/man1/ls.1.gz");
+        if (!f.exists()) QSKIP("No ls.1.gz on system");
+        QString html = svc.renderPage("/usr/share/man/man1/ls.1.gz");
+        QVERIFY(!html.isEmpty());
+        auto refs = svc.parseCrossReferences(html);
+        QVERIFY(!refs.isEmpty());
+        bool foundDircolors = false;
+        for (const auto& r : refs) {
+            if (r.name == "dircolors") { foundDircolors = true; break; }
+        }
+        QVERIFY(foundDircolors);
     }
 };
 

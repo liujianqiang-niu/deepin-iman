@@ -29,14 +29,14 @@ int main(int argc, char* argv[]) {
     app.setApplicationDescription(QObject::tr("AI-powered man page viewer"));
 
     QProcess whichProc;
-    whichProc.start("which", {"man"});
+    whichProc.start("which", {"mandoc"});
     whichProc.waitForFinished();
     if (whichProc.exitCode() != 0) {
         DDialog dlg;
-        dlg.setWindowTitle(QObject::tr("man not installed"));
+        dlg.setWindowTitle(QObject::tr("mandoc not installed"));
         dlg.setMessage(QObject::tr(
-            "deepin-iman requires man-db to render man pages.\n"
-            "Please install it with:\n\n  sudo apt install man-db\n\n"
+            "deepin-iman requires mandoc to render man pages.\n"
+            "Please install it with:\n\n  sudo apt install mandoc\n\n"
             "Then restart deepin-iman."));
         dlg.addButton(QObject::tr("Exit"), false, DDialog::ButtonRecommend);
         dlg.exec();

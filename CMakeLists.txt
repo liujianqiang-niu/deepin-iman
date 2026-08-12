@@ -9,6 +9,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Sql Concurrent Test)
 find_package(Dtk6Widget REQUIRED)
 find_package(Dtk6Core REQUIRED)
+find_program(MANDOC_EXECUTABLE mandoc REQUIRED)
 
 enable_testing()
 
