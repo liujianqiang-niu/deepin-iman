@@ -92,13 +92,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (index.pageCount() == 0) {
+    bool needsScan = (index.pageCount() == 0) || index.needsUpdate("/usr/share/man");
+    if (needsScan) {
         DDialog progressDlg;
-        progressDlg.setWindowTitle("正在索引 man 手册...");
+        progressDlg.setWindowTitle(index.pageCount() == 0 ? "正在索引 man 手册..." : "正在更新 man 手册索引...");
         auto* progressBar = new DProgressBar;
         progressBar->setRange(0, 100);
         progressBar->setValue(0);
-        auto* label = new DLabel("正在扫描 man 手册，请稍候...");
+        auto* label = new DLabel(index.pageCount() == 0 ? "正在扫描 man 手册，请稍候..." : "正在更新 man 手册索引，请稍候...");
         auto* layout = new QVBoxLayout;
         layout->addWidget(label);
         layout->addWidget(progressBar);
@@ -116,7 +117,10 @@ int main(int argc, char* argv[]) {
         });
         QObject::connect(&index, &ManIndex::scanFinished, &progressDlg, &DDialog::accept);
 
-        auto future = QtConcurrent::run([&index]() { index.scanManPages("/usr/share/man"); });
+        auto future = QtConcurrent::run([&index]() {
+            if (index.pageCount() == 0) index.scanManPages("/usr/share/man");
+            else index.refreshManPages("/usr/share/man");
+        });
         Q_UNUSED(future)
 
         while (progressDlg.isVisible()) {

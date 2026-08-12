@@ -15,12 +15,15 @@
 #include "service/HistoryService.h"
 #include <DTitlebar>
 #include <DDialog>
+#include <DProgressBar>
+#include <DLabel>
 #include <QMenu>
 #include <QAction>
 #include <QSplitter>
 #include <QShortcut>
 #include <QIcon>
 #include <QSettings>
+#include <QtConcurrent>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
                        AiService* aiSvc, TranslationService* trSvc,
@@ -60,6 +63,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
         connect(terminalAction, &QAction::toggled, this, &MainWindow::onToggleTerminal);
         auto* favAction = menu->addAction("收藏当前页");
         connect(favAction, &QAction::triggered, this, &MainWindow::onToggleFavorite);
+        auto* refreshAction = menu->addAction("刷新索引");
+        connect(refreshAction, &QAction::triggered, this, &MainWindow::onRefreshIndex);
         // DTitlebar 内置"关于"菜单项由 DApplication 统一提供，不再重复添加
     }
 
@@ -271,5 +276,41 @@ void MainWindow::updateAiModelInfo() {
         m_aiPanel->setProviderModelInfo(p->displayName(), p->model());
     } else {
         m_aiPanel->setProviderModelInfo("未配置", "");
+    }
+}
+
+void MainWindow::onRefreshIndex() {
+    DDialog progressDlg(this);
+    progressDlg.setWindowTitle("正在刷新 man 手册索引...");
+    auto* progressBar = new DProgressBar;
+    progressBar->setRange(0, 100);
+    progressBar->setValue(0);
+    auto* label = new DLabel("正在扫描 man 手册，请稍候...");
+    auto* layout = new QVBoxLayout;
+    layout->addWidget(label);
+    layout->addWidget(progressBar);
+    auto* content = new QWidget;
+    content->setLayout(layout);
+    progressDlg.addContent(content);
+    progressDlg.setFixedWidth(400);
+    progressDlg.show();
+
+    connect(m_index, &ManIndex::scanProgress, this, [&](int cur, int total) {
+        progressBar->setMaximum(total);
+        progressBar->setValue(cur);
+        QCoreApplication::processEvents();
+    });
+    connect(m_index, &ManIndex::scanFinished, &progressDlg, [&progressDlg, this](int count) {
+        progressDlg.accept();
+        m_aiPanel->appendMessage("系统", QString("索引刷新完成，共 %1 页").arg(m_index->pageCount()));
+    });
+
+    QtConcurrent::run([this]() {
+        m_index->refreshManPages("/usr/share/man");
+    });
+
+    while (progressDlg.isVisible()) {
+        QCoreApplication::processEvents();
+        QThread::msleep(50);
     }
 }

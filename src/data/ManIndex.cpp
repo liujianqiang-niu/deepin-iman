@@ -154,6 +154,102 @@ int ManIndex::scanManPages(const QString& manRoot) {
     return count;
 }
 
+bool ManIndex::needsUpdate(const QString& manRoot) const {
+    QStringList fsFiles = findManFiles(manRoot);
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.exec("SELECT COUNT(*) FROM man_page");
+    int dbCount = q.next() ? q.value(0).toInt() : 0;
+    return fsFiles.size() != dbCount;
+}
+
+int ManIndex::refreshManPages(const QString& manRoot) {
+    QStringList fsFiles = findManFiles(manRoot);
+    QSet<QString> fsFileSet(fsFiles.begin(), fsFiles.end());
+
+    QSqlQuery q(m_db);
+
+    QSet<int> staleIds;
+    q.prepare("SELECT id, source_path, source_mtime FROM man_page");
+    q.exec();
+    QMap<QString, int> existingPaths;
+    while (q.next()) {
+        int id = q.value(0).toInt();
+        QString path = q.value(1).toString();
+        qint64 mtime = q.value(2).toLongLong();
+        existingPaths[path] = id;
+        if (!fsFileSet.contains(path)) {
+            staleIds.insert(id);
+        }
+    }
+
+    if (!staleIds.isEmpty()) {
+        q.prepare("DELETE FROM man_page WHERE id = ?");
+        for (int id : staleIds) {
+            q.addBindValue(id);
+            q.exec();
+        }
+        q.prepare("DELETE FROM man_fts WHERE rowid = ?");
+        for (int id : staleIds) {
+            q.addBindValue(id);
+            q.exec();
+        }
+    }
+
+    int added = 0;
+    int updated = 0;
+    for (int i = 0; i < fsFiles.size(); ++i) {
+        const QString& path = fsFiles[i];
+        ManPage page = parseManPath(path);
+        if (page.name.isEmpty()) continue;
+
+        QFileInfo fi(path);
+        qint64 currentMtime = fi.lastModified().toSecsSinceEpoch();
+
+        if (existingPaths.contains(path)) {
+            QSqlQuery check(m_db);
+            check.prepare("SELECT source_mtime FROM man_page WHERE id = ?");
+            check.addBindValue(existingPaths[path]);
+            check.exec();
+            if (check.next() && check.value(0).toLongLong() == currentMtime) {
+                continue;
+            }
+            check.prepare("DELETE FROM man_page WHERE id = ?");
+            check.addBindValue(existingPaths[path]);
+            check.exec();
+            check.prepare("DELETE FROM man_fts WHERE rowid = ?");
+            check.addBindValue(existingPaths[path]);
+            check.exec();
+            ++updated;
+        } else {
+            ++added;
+        }
+
+        page.title = page.name;
+        q.prepare("INSERT INTO man_page (name, section, section_name, source_path, "
+                  "title, source_mtime, indexed_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        q.addBindValue(page.name);
+        q.addBindValue(page.section);
+        q.addBindValue(page.sectionName);
+        q.addBindValue(page.sourcePath);
+        q.addBindValue(page.title);
+        q.addBindValue(page.sourceMtime);
+        q.addBindValue(QDateTime::currentSecsSinceEpoch());
+        if (q.exec()) {
+            int id = q.lastInsertId().toInt();
+            q.prepare("INSERT INTO man_fts (rowid, name, title, body) VALUES (?, ?, ?, ?)");
+            q.addBindValue(id);
+            q.addBindValue(page.name);
+            q.addBindValue(page.title);
+            q.addBindValue(page.name);
+            q.exec();
+        }
+        if (i % 100 == 0) emit scanProgress(i + 1, fsFiles.size());
+    }
+    emit scanProgress(fsFiles.size(), fsFiles.size());
+    emit scanFinished(added + updated);
+    return added + updated;
+}
+
 int ManIndex::pageCount() const {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.exec("SELECT COUNT(*) FROM man_page");

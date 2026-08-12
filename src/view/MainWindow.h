@@ -41,6 +41,7 @@ private slots:
     void onOpenSettings();
     void onToggleTerminal();
     void onToggleFavorite();
+    void onRefreshIndex();
     void onTranslateRequested(const ManPage& page, const QString& targetLang);
     void onExamplesRequested(const ManPage& page);
     void onQuestionAsked(const ManPage& page, const QString& question);

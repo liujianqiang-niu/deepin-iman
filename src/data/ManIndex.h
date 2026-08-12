@@ -25,6 +25,8 @@ public:
     bool open();
     bool tableExists(const QString& name);
     int scanManPages(const QString& manRoot);
+    int refreshManPages(const QString& manRoot);
+    bool needsUpdate(const QString& manRoot) const;
     int pageCount() const;
 
     QList<ManPage> findByName(const QString& name) const;
