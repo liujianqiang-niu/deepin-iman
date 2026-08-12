@@ -34,6 +34,11 @@ public:
     virtual QString apiKey() const = 0;
     virtual bool isConfigured() const = 0;
 
+    virtual void setApiBase(const QString& base) { Q_UNUSED(base) }
+    virtual QString apiBase() const { return {}; }
+    virtual void setModel(const QString& model) { Q_UNUSED(model) }
+    virtual QString model() const { return {}; }
+
     virtual void chat(const AiRequest& req,
                       std::function<void(const AiChunk&)> onChunk,
                       std::function<void(const AiResult&)> onDone,

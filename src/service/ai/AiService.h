@@ -2,10 +2,20 @@
 #pragma once
 #include <QObject>
 #include <QMap>
+#include <QList>
 #include <functional>
 #include "IAiProvider.h"
+#include "OpenAiCompatibleProvider.h"
 
 struct ManPage;
+
+struct ProviderConfig {
+    QString id;
+    QString displayName;
+    QString apiBase;
+    QString apiKey;
+    QString model;
+};
 
 class AiService : public QObject {
     Q_OBJECT
@@ -13,6 +23,11 @@ public:
     explicit AiService(QObject* parent = nullptr);
 
     void initializeProviders();
+
+    QList<ProviderConfig> providerConfigs() const;
+    ProviderConfig providerConfig(const QString& id) const;
+    void setProviderConfigs(const QList<ProviderConfig>& configs);
+
     QStringList providerIds() const;
     QString providerDisplayName(const QString& id) const;
     void setActiveProvider(const QString& id);
@@ -37,16 +52,22 @@ public:
     void cancelCurrentTask();
 
     static QString loadPromptTemplate(const QString& name);
+    static QList<ProviderConfig> defaultProviderConfigs();
 
 signals:
     void providerChanged(const QString& id);
+    void providerListChanged();
 
 private:
-    QMap<QString, IAiProvider*> m_providers;
+    QMap<QString, OpenAiCompatibleProvider*> m_providers;
+    QList<ProviderConfig> m_configs;
     QString m_activeProviderId;
 
     void callAi(const QString& systemPrompt, const QString& userPrompt,
                 std::function<void(const AiChunk&)> onChunk,
                 std::function<void(const AiResult&)> onDone,
                 std::function<void(const QString&)> onError);
+    void loadFromSettings();
+    void saveToSettings();
+    void rebuildProviders();
 };

@@ -30,10 +30,7 @@ set(APP_SOURCES
     src/service/HistoryService.cpp
     src/service/ai/AiService.cpp
     src/service/ai/IAiProvider.cpp
-    src/service/ai/OpenAiProvider.cpp
-    src/service/ai/ClaudeProvider.cpp
-    src/service/ai/QwenProvider.cpp
-    src/service/ai/GlmProvider.cpp
+    src/service/ai/OpenAiCompatibleProvider.cpp
     src/view/MainWindow.cpp
     src/view/LeftSidebar.cpp
     src/view/ManView.cpp

@@ -1,9 +1,6 @@
 // src/service/ai/AiService.cpp
 #include "AiService.h"
-#include "OpenAiProvider.h"
-#include "ClaudeProvider.h"
-#include "QwenProvider.h"
-#include "GlmProvider.h"
+#include "OpenAiCompatibleProvider.h"
 #include "data/ManIndex.h"
 #include <QFile>
 #include <QRegularExpression>
@@ -11,25 +8,131 @@
 #include <QSettings>
 #include <QDir>
 #include <QDebug>
+#include <QUuid>
 
 AiService::AiService(QObject* parent) : QObject(parent) {
 }
 
-void AiService::initializeProviders() {
-    m_providers["openai"] = new OpenAiProvider(this);
-    m_providers["claude"] = new ClaudeProvider(this);
-    m_providers["qwen"] = new QwenProvider(this);
-    m_providers["glm"] = new GlmProvider(this);
+QList<ProviderConfig> AiService::defaultProviderConfigs() {
+    return {
+        {"openai", "OpenAI",
+         "https://api.openai.com/v1/chat/completions", "", "gpt-4o"},
+        {"glm", "智谱 GLM",
+         "https://open.bigmodel.cn/api/paas/v4/chat/completions", "", "glm-4-plus"},
+        {"qwen", "通义千问",
+         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "", "qwen-max"},
+        {"deepseek", "DeepSeek",
+         "https://api.deepseek.com/v1/chat/completions", "", "deepseek-chat"},
+    };
+}
 
+void AiService::initializeProviders() {
+    loadFromSettings();
+    rebuildProviders();
+}
+
+void AiService::loadFromSettings() {
     QSettings settings("deepin", "deepin-iman");
-    for (auto it = m_providers.begin(); it != m_providers.end(); ++it) {
-        QString key = settings.value("ai/" + it.key() + "_key").toString();
-        it.value()->setApiKey(key);
+
+    m_configs.clear();
+    int size = settings.beginReadArray("ai/providers");
+    if (size > 0) {
+        for (int i = 0; i < size; ++i) {
+            settings.setArrayIndex(i);
+            ProviderConfig cfg;
+            cfg.id = settings.value("id").toString();
+            cfg.displayName = settings.value("name").toString();
+            cfg.apiBase = settings.value("apiBase").toString();
+            cfg.apiKey = settings.value("apiKey").toString();
+            cfg.model = settings.value("model").toString();
+            if (!cfg.id.isEmpty()) m_configs.append(cfg);
+        }
+    } else {
+        settings.endArray();
+        bool hasOld = settings.contains("ai/openai_key") || settings.contains("ai/glm_key") ||
+                      settings.contains("ai/qwen_key") || settings.contains("ai/claude_key");
+        if (hasOld) {
+            auto defaults = defaultProviderConfigs();
+            for (auto& cfg : defaults) {
+                cfg.apiKey = settings.value("ai/" + cfg.id + "_key").toString();
+            }
+            m_configs = defaults;
+        } else {
+            m_configs = defaultProviderConfigs();
+        }
     }
-    m_activeProviderId = settings.value("ai/active_provider", "glm").toString();
-    if (!m_providers.contains(m_activeProviderId)) {
+    if (!size) settings.endArray();
+
+    m_activeProviderId = settings.value("ai/active_provider",
+                                         m_configs.isEmpty() ? "" : m_configs.first().id).toString();
+    if (!m_configs.isEmpty()) {
+        bool found = false;
+        for (const auto& cfg : m_configs) {
+            if (cfg.id == m_activeProviderId) { found = true; break; }
+        }
+        if (!found) m_activeProviderId = m_configs.first().id;
+    }
+}
+
+void AiService::saveToSettings() {
+    QSettings settings("deepin", "deepin-iman");
+    settings.beginWriteArray("ai/providers");
+    for (int i = 0; i < m_configs.size(); ++i) {
+        settings.setArrayIndex(i);
+        settings.setValue("id", m_configs[i].id);
+        settings.setValue("name", m_configs[i].displayName);
+        settings.setValue("apiBase", m_configs[i].apiBase);
+        settings.setValue("apiKey", m_configs[i].apiKey);
+        settings.setValue("model", m_configs[i].model);
+    }
+    settings.endArray();
+    settings.setValue("ai/active_provider", m_activeProviderId);
+}
+
+void AiService::rebuildProviders() {
+    qDeleteAll(m_providers);
+    m_providers.clear();
+
+    for (const auto& cfg : m_configs) {
+        auto* p = new OpenAiCompatibleProvider(this);
+        p->setId(cfg.id);
+        p->setDisplayName(cfg.displayName);
+        p->setApiBase(cfg.apiBase);
+        p->setApiKey(cfg.apiKey);
+        p->setModel(cfg.model);
+        m_providers[cfg.id] = p;
+    }
+
+    if (!m_providers.contains(m_activeProviderId) && !m_providers.isEmpty()) {
         m_activeProviderId = m_providers.keys().first();
     }
+    emit providerListChanged();
+}
+
+QList<ProviderConfig> AiService::providerConfigs() const {
+    return m_configs;
+}
+
+ProviderConfig AiService::providerConfig(const QString& id) const {
+    for (const auto& cfg : m_configs) {
+        if (cfg.id == id) return cfg;
+    }
+    return {};
+}
+
+void AiService::setProviderConfigs(const QList<ProviderConfig>& configs) {
+    m_configs = configs;
+    if (!m_configs.isEmpty()) {
+        bool found = false;
+        for (const auto& cfg : m_configs) {
+            if (cfg.id == m_activeProviderId) { found = true; break; }
+        }
+        if (!found) m_activeProviderId = m_configs.first().id;
+    } else {
+        m_activeProviderId.clear();
+    }
+    rebuildProviders();
+    saveToSettings();
 }
 
 QStringList AiService::providerIds() const {
@@ -68,7 +171,7 @@ void AiService::callAi(const QString& systemPrompt, const QString& userPrompt,
                         std::function<void(const QString&)> onError) {
     auto* p = activeProviderPtr();
     if (!p || !p->isConfigured()) {
-        onError("AI 供应商未配置，请在设置中填写 API key");
+        onError("AI 供应商未配置，请在设置中填写 API 地址和 API Key");
         return;
     }
     AiRequest req;
@@ -100,9 +203,9 @@ void AiService::generateExamples(const ManPage& page,
 }
 
 void AiService::askQuestion(const ManPage& page, const QString& question,
-                             std::function<void(const AiChunk&)> onChunk,
-                             std::function<void(const AiResult&)> onDone,
-                             std::function<void(const QString&)> onError) {
+                              std::function<void(const AiChunk&)> onChunk,
+                              std::function<void(const AiResult&)> onDone,
+                              std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("qa");
     QString user = QString("用户正在查看 %1(%2) 的 man 手册。\n\n"
                            "手册标题：%3\n\n"

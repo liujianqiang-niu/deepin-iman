@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
     app.setProductIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
     app.setProductName("deepin man 手册");
     app.setApplicationDescription("AI 驱动的 man 手册查看器");
+    app.setApplicationLicense("LGPL-3.0+");
     app.setWindowIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
 
     QTranslator dtkTranslator;

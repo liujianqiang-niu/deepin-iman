@@ -60,19 +60,7 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
         connect(terminalAction, &QAction::toggled, this, &MainWindow::onToggleTerminal);
         auto* favAction = menu->addAction("收藏当前页");
         connect(favAction, &QAction::triggered, this, &MainWindow::onToggleFavorite);
-        menu->addSeparator();
-        auto* helpMenu = menu->addMenu("帮助");
-        auto* aboutAction = helpMenu->addAction("关于");
-        connect(aboutAction, &QAction::triggered, this, [this]() {
-            DDialog dlg(this);
-            dlg.setWindowTitle("关于 deepin man 手册");
-            dlg.setMessage("deepin man 手册 v0.1.0\n\n"
-                          "AI 驱动的 man 手册查看器\n\n"
-                          "开发者：liujianqiang@uniontech.com\n"
-                          "许可证：LGPL-2.1+");
-            dlg.addButton("确定", true, DDialog::ButtonRecommend);
-            dlg.exec();
-        });
+        // DTitlebar 内置"关于"菜单项由 DApplication 统一提供，不再重复添加
     }
 
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -191,14 +179,15 @@ void MainWindow::updateNavButtons() {
 }
 
 void MainWindow::onOpenSettings() {
-    SettingsDialog dlg(this);
+    SettingsDialog dlg(m_aiSvc->providerConfigs(), m_aiSvc->activeProvider(), this);
     if (dlg.exec() == DDialog::Accepted) {
-        QString newProvider = dlg.activeProvider();
-        m_aiSvc->setActiveProvider(newProvider);
-        m_aiPanel->setActiveProvider(newProvider);
-        for (const auto& id : m_aiSvc->providerIds()) {
-            m_aiSvc->provider(id)->setApiKey(dlg.apiKey(id));
-        }
+        m_aiSvc->setProviderConfigs(dlg.configs());
+        m_aiSvc->setActiveProvider(dlg.activeProvider());
+        QStringList ids = m_aiSvc->providerIds();
+        QStringList names;
+        for (const auto& id : ids) names << m_aiSvc->providerDisplayName(id);
+        m_aiPanel->setProviderList(ids, names);
+        m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
     }
 }
 

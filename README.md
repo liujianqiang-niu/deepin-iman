@@ -37,7 +37,7 @@ sudo apt install deepin-iman
 
 ## License
 
-LGPL-2.1+
+LGPL-3.0+
 
 ## Author
 
