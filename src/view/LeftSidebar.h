@@ -1,7 +1,7 @@
 // src/view/LeftSidebar.h
 #pragma once
 #include <DWidget>
-#include <DLineEdit>
+#include <DSearchEdit>
 #include <DTreeView>
 #include <QStandardItemModel>
 
@@ -21,7 +21,7 @@ signals:
     void pageSelected(const QString& name, int section);
 
 private:
-    DLineEdit* m_searchEdit;
+    DSearchEdit* m_searchEdit;
     DTreeView* m_navTree;
     QStandardItemModel* m_navModel;
 };

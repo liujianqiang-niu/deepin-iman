@@ -9,6 +9,8 @@
 #include <QProcess>
 #include <QVBoxLayout>
 #include <QThread>
+#include <QTranslator>
+#include <QLocale>
 #include <QtConcurrent/QtConcurrent>
 
 DWIDGET_USE_NAMESPACE
@@ -24,9 +26,34 @@ int main(int argc, char* argv[]) {
     app.setOrganizationName("deepin");
     app.setApplicationName("deepin-iman");
     app.setApplicationVersion("0.1.0");
-    app.setProductIcon(QIcon::fromTheme("help-browser"));
-    app.setProductName("deepin iman");
+    app.setProductIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
+    app.setProductName(QObject::tr("deepin iman"));
     app.setApplicationDescription(QObject::tr("AI-powered man page viewer"));
+    app.setWindowIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
+
+    QTranslator translator;
+    QString locale = QLocale::system().name();
+    QString tsDir;
+    QStringList searchPaths = {
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/translations",
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/translations",
+    };
+    QDir appDir(QCoreApplication::applicationDirPath());
+    searchPaths << appDir.absoluteFilePath("../share/deepin-iman/translations");
+    searchPaths << appDir.absoluteFilePath("translations");
+
+    for (const auto& dir : searchPaths) {
+        if (QFile::exists(dir + "/deepin_iman_" + locale + ".qm")) {
+            tsDir = dir;
+            break;
+        }
+    }
+    if (tsDir.isEmpty()) {
+        tsDir = ":/translations";
+    }
+    if (translator.load("deepin_iman_" + locale, tsDir)) {
+        app.installTranslator(&translator);
+    }
 
     QProcess whichProc;
     whichProc.start("which", {"mandoc"});

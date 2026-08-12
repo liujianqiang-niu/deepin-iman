@@ -5,8 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Sql Concurrent Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Sql Concurrent Test LinguistTools)
 find_package(Dtk6Widget REQUIRED)
 find_package(Dtk6Core REQUIRED)
 find_program(MANDOC_EXECUTABLE mandoc REQUIRED)
@@ -25,7 +26,7 @@ set(APP_SOURCES
     src/view/ManView.cpp
 )
 
-add_executable(deepin-iman ${APP_SOURCES})
+add_executable(deepin-iman ${APP_SOURCES} resources.qrc)
 
 target_include_directories(deepin-iman PRIVATE
     src
@@ -46,11 +47,41 @@ target_link_libraries(deepin-iman PRIVATE
 
 install(TARGETS deepin-iman DESTINATION bin)
 
+# Install application icon (SVG scalable + PNG sizes)
+install(FILES assets/icons/deepin-iman.svg
+        DESTINATION share/icons/hicolor/scalable/apps)
+foreach(size 16 22 24 32 48 64 128 256)
+    install(FILES assets/icons/deepin-iman-${size}.png
+            DESTINATION share/icons/hicolor/${size}x${size}/apps
+            RENAME deepin-iman.png)
+endforeach()
+
 # Install desktop file
 install(FILES debian/deepin-iman.desktop DESTINATION share/applications)
 
 # Install man page
 install(FILES debian/deepin-iman.1 DESTINATION share/man/man1)
+
+# Translations
+file(GLOB TS_FILES translations/*.ts)
+set_source_files_properties(${TS_FILES} PROPERTIES OUTPUT_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/translations)
+find_program(LRELEASE_EXECUTABLE lrelease PATHS /usr/lib/qt6/bin /usr/lib/qt5/bin NO_DEFAULT_PATH)
+set(QM_FILES "")
+foreach(ts_file ${TS_FILES})
+    get_filename_component(qm_name ${ts_file} NAME_WE)
+    set(qm_file ${CMAKE_CURRENT_BINARY_DIR}/translations/${qm_name}.qm)
+    add_custom_command(
+        OUTPUT ${qm_file}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/translations
+        COMMAND ${LRELEASE_EXECUTABLE} ${ts_file} -qm ${qm_file}
+        DEPENDS ${ts_file}
+        VERBATIM
+    )
+    list(APPEND QM_FILES ${qm_file})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+add_dependencies(deepin-iman translations)
+install(FILES ${QM_FILES} DESTINATION share/deepin-iman/translations)
 
 # Tests (added incrementally per task)
 # Manually generate moc for test cpp file (Q_OBJECT class defined in .cpp)

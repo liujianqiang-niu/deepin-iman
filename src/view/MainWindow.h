@@ -1,6 +1,7 @@
 // src/view/MainWindow.h
 #pragma once
 #include <DMainWindow>
+#include <DIconButton>
 #include <QStack>
 
 DWIDGET_USE_NAMESPACE
@@ -31,9 +32,13 @@ private:
     SearchService* m_searchSvc;
     ManService* m_manSvc;
 
+    DIconButton* m_btnPrev;
+    DIconButton* m_btnNext;
+
     QStack<int> m_backStack;
     QStack<int> m_forwardStack;
     int m_currentPageId = -1;
 
     void openPage(const QString& name, int section);
+    void updateNavButtons();
 };
