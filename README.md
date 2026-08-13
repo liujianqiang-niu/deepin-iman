@@ -4,15 +4,17 @@ AI-powered man page viewer for deepin v25.
 
 ## Features
 
-- **Full-text search** across all man pages (SQLite FTS5)
+- **Full-text search** across all man pages (SQLite FTS5) with case-sensitive and whole-word match toggles
 - **Cross-reference navigation** (SEE ALSO links)
 - **mandoc HTML rendering** with structure-preserving output
-- **AI-powered translation** (multi-provider: OpenAI/Claude/Qwen/GLM)
-- **Chinese + English side-by-side view**
-- **AI-generated usage examples**
-- **Embedded terminal** (QTermWidget)
-- **Cheat sheet generation** (PDF/Markdown export)
-- **Learning history** with AI weekly reports
+- **AI-powered translation** (user-configurable OpenAI-compatible providers, 7 target languages)
+- **Inline split view** — translation and examples appear beside the original text with synchronized scrolling
+- **AI-generated usage examples** with annotations and expected output
+- **AI Q&A** — ask questions about the current man page and get context-aware answers
+- **Command parsing** — paste a command line and jump to the corresponding man page
+- **Favorites** — bookmark man pages and access them from the menu
+- **Browse history** — auto-tracks visited pages (keeps latest 100)
+- **Auto index update** — detects new/removed man pages on startup, plus manual refresh
 
 ## Build
 

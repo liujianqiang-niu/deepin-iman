@@ -8,41 +8,64 @@ deepin-iman \- AI-powered man page viewer for deepin
 .B deepin-iman
 is a man page browser that deeply integrates AI capabilities with the
 traditional man page experience. It allows users to browse, search, and
-navigate all man pages, and leverages AI to provide Chinese translation,
-usage examples, command Q&A, and command parsing.
+navigate all man pages, and leverages AI to provide multi-language
+translation, usage examples, command Q&A, and command parsing.
 .SH FEATURES
 .TP
 .B Full-text search
 Search across all man pages using SQLite FTS5 full-text indexing.
+Toggle case-sensitive matching and whole-word matching from the search
+bar, similar to VSCode find.
 .TP
 .B Cross-reference navigation
-Click SEE ALSO links to jump between related man pages.
+Click SEE ALSO links to jump between related man pages. Navigate
+back and forward with Alt+Left / Alt+Right.
 .TP
 .B AI translation
-Multi-provider AI translation (OpenAI/Claude/Qwen/GLM) with preset
-Chinese translation packages and local caching.
+User-configurable OpenAI-compatible providers. Translation appears
+inline beside the original text with synchronized scrolling. Seven
+target languages supported (Chinese, English, Japanese, French,
+German, Spanish, Russian).
 .TP
-.B Side-by-side view
-Chinese and English man pages displayed side by side.
+.B Inline split view
+Translation and AI-generated examples are displayed in a split panel
+next to the original man page, not in a popup dialog. Scroll one
+side and the other follows.
 .TP
 .B AI examples
-AI-generated usage examples with annotations and expected output.
+AI-generated usage examples with annotations and expected output,
+displayed inline beside the original man page.
 .TP
-.B Embedded terminal
-Run commands directly within the application.
+.B AI Q&A
+Ask questions about the current man page and get context-aware answers
+from the AI.
 .TP
-.B Cheat sheets
-AI-generated quick reference cards, exportable as PDF or Markdown.
+.B Command parsing
+Paste a command line (e.g. \fBsudo netstat \-tlunp\fR) and the app
+extracts the command name and jumps to the corresponding man page.
 .TP
-.B Learning history
-Browse history with AI-generated weekly learning reports.
+.B Favorites
+Bookmark man pages from the menu. Access the favorites list from the
+menu; double-click to jump to a page.
+.TP
+.B Browse history
+Automatically records visited man pages. Keeps the latest 100 entries.
+Access from the menu; double-click to jump.
+.TP
+.B Auto index update
+Detects new or removed man pages on startup. Manual refresh available
+from the menu.
+.TP
+.B Configurable AI providers
+Add, edit, delete, and test OpenAI-compatible providers. Includes
+test-connection validation. Provider settings persist across restarts.
 .SH FILES
 .TP
-.I ~/.local/share/deepin-iman/
-Application data directory (index, cache, history, favorites).
+.I ~/.local/share/deepin/deepin-iman/
+Application data directory (manindex.db, translation.db, favorite.db, history.db).
 .TP
-.I ~/.config/deepin-iman/
-Configuration directory (QSettings).
+.I ~/.config/deepin/deepin-iman.conf
+Configuration file (QSettings, AI provider list).
 .SH SEE ALSO
 .BR man (1),
 .BR mandoc (1),
