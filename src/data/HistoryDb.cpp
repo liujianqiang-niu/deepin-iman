@@ -106,3 +106,13 @@ void HistoryDb::clearAll() {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.exec("DELETE FROM history");
 }
+
+void HistoryDb::deleteByIds(const QList<int>& ids) {
+    if (ids.isEmpty()) return;
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    QStringList placeholders;
+    for (int i = 0; i < ids.size(); ++i) placeholders << "?";
+    q.prepare(QString("DELETE FROM history WHERE id IN (%1)").arg(placeholders.join(", ")));
+    for (int id : ids) q.addBindValue(id);
+    q.exec();
+}

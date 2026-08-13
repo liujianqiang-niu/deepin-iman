@@ -10,6 +10,7 @@ public:
     void recordVisit(int pageId, const QString& pageName, int pageSection);
     QList<HistoryItem> recent(int limit = 50) const;
     void clearAll();
+    void deleteByIds(const QList<int>& ids);
 
 private:
     HistoryDb* m_db;

@@ -26,6 +26,7 @@ public:
     QList<HistoryItem> since(qint64 timestamp) const;
     void cleanup(int keepCount = 100);
     void clearAll();
+    void deleteByIds(const QList<int>& ids);
 
 private:
     QString m_dbPath;

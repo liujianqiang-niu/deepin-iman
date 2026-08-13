@@ -20,11 +20,17 @@ public:
 
 signals:
     void pageSelected(const QString& name, int section);
-    void favoriteDeleted(int pageId);
+    void favoritesDeleted(const QList<int>& ids);
+    void historyDeleted(const QList<int>& ids);
 
 private:
     DListView* m_listView;
     QStandardItemModel* m_model;
+    DPushButton* m_btnSelectAll;
     DPushButton* m_btnDelete;
-    void deleteSelectedFavorite();
+    bool m_isFavoritesMode = false;
+
+    void toggleSelectAll();
+    void deleteSelected();
+    QList<int> selectedIds() const;
 };

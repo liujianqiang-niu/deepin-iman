@@ -17,3 +17,7 @@ QList<HistoryItem> HistoryService::recent(int limit) const {
 void HistoryService::clearAll() {
     m_db->clearAll();
 }
+
+void HistoryService::deleteByIds(const QList<int>& ids) {
+    m_db->deleteByIds(ids);
+}

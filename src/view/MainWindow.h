@@ -46,7 +46,6 @@ private slots:
     void onShowFavorites();
     void onShowHistory();
     void onDataManage();
-    void onFavoriteDeleted(int pageId);
     void onTranslateRequested(const ManPage& page, const QString& targetLang);
     void onExamplesRequested(const ManPage& page);
     void onQuestionAsked(const ManPage& page, const QString& question);

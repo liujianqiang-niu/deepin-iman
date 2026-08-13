@@ -65,6 +65,16 @@ void FavoriteDb::clearAll() {
     q.exec("DELETE FROM favorite");
 }
 
+void FavoriteDb::deleteByIds(const QList<int>& ids) {
+    if (ids.isEmpty()) return;
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    QStringList placeholders;
+    for (int i = 0; i < ids.size(); ++i) placeholders << "?";
+    q.prepare(QString("DELETE FROM favorite WHERE id IN (%1)").arg(placeholders.join(", ")));
+    for (int id : ids) q.addBindValue(id);
+    q.exec();
+}
+
 bool FavoriteDb::isFavorite(int pageId) const {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.prepare("SELECT 1 FROM favorite WHERE page_id = ?");

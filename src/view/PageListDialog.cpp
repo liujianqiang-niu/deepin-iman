@@ -4,7 +4,6 @@
 #include <QHBoxLayout>
 #include <QDateTime>
 #include <QIcon>
-#include <DPushButton>
 
 PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     : DDialog(parent)
@@ -23,8 +22,9 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     layout->addWidget(m_listView);
 
     auto* btnLayout = new QHBoxLayout;
-    m_btnDelete = new DPushButton("删除选中收藏", widget);
-    m_btnDelete->setVisible(false);
+    m_btnSelectAll = new DPushButton("全选", widget);
+    m_btnDelete = new DPushButton("删除选中", widget);
+    btnLayout->addWidget(m_btnSelectAll);
     btnLayout->addStretch();
     btnLayout->addWidget(m_btnDelete);
     layout->addLayout(btnLayout);
@@ -32,12 +32,6 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     addContent(widget);
     addButton("关闭", true, DDialog::ButtonRecommend);
 
-    connect(m_listView, &DListView::clicked, this, [this](const QModelIndex& idx) {
-        auto* item = m_model->item(idx.row());
-        if (item) {
-            emit pageSelected(item->text(), item->data(Qt::UserRole + 1).toInt());
-        }
-    });
     connect(m_listView, &DListView::doubleClicked, this, [this](const QModelIndex& idx) {
         auto* item = m_model->item(idx.row());
         if (item) {
@@ -45,11 +39,12 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
             accept();
         }
     });
-    connect(m_btnDelete, &DPushButton::clicked, this, &PageListDialog::deleteSelectedFavorite);
+    connect(m_btnSelectAll, &DPushButton::clicked, this, &PageListDialog::toggleSelectAll);
+    connect(m_btnDelete, &DPushButton::clicked, this, &PageListDialog::deleteSelected);
 }
 
 void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
-    m_btnDelete->setVisible(true);
+    m_isFavoritesMode = true;
     m_model->clear();
     for (const auto& item : items) {
         if (item.pageName.isEmpty()) continue;
@@ -57,13 +52,15 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
             QString("%1(%2)").arg(item.pageName).arg(item.pageSection));
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
-        row->setData(item.pageId, Qt::UserRole + 2);
+        row->setData(item.id, Qt::UserRole + 2);
+        row->setCheckable(true);
+        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
     }
 }
 
 void PageListDialog::setHistory(const QList<HistoryItem>& items) {
-    m_btnDelete->setVisible(false);
+    m_isFavoritesMode = false;
     m_model->clear();
     for (const auto& item : items) {
         if (item.pageName.isEmpty()) continue;
@@ -72,17 +69,55 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
                 .arg(QDateTime::fromSecsSinceEpoch(item.visitedAt).toString("MM-dd HH:mm")));
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
+        row->setData(item.id, Qt::UserRole + 2);
+        row->setCheckable(true);
+        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
     }
 }
 
-void PageListDialog::deleteSelectedFavorite() {
-    auto idx = m_listView->currentIndex();
-    if (!idx.isValid()) return;
-    auto* item = m_model->item(idx.row());
-    if (!item) return;
-    int pageId = item->data(Qt::UserRole + 2).toInt();
-    if (pageId <= 0) return;
-    emit favoriteDeleted(pageId);
-    m_model->removeRow(idx.row());
+void PageListDialog::toggleSelectAll() {
+    bool anyUnchecked = false;
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Unchecked) { anyUnchecked = true; break; }
+    }
+    Qt::CheckState state = anyUnchecked ? Qt::Checked : Qt::Unchecked;
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        auto* item = m_model->item(i);
+        if (item) item->setCheckState(state);
+    }
+    m_btnSelectAll->setText(anyUnchecked ? "取消全选" : "全选");
+}
+
+QList<int> PageListDialog::selectedIds() const {
+    QList<int> ids;
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Checked) {
+            ids << item->data(Qt::UserRole + 2).toInt();
+        }
+    }
+    return ids;
+}
+
+void PageListDialog::deleteSelected() {
+    QList<int> ids = selectedIds();
+    if (ids.isEmpty()) return;
+
+    if (m_isFavoritesMode) {
+        emit favoritesDeleted(ids);
+    } else {
+        emit historyDeleted(ids);
+    }
+
+    QList<int> rows;
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Checked) rows << i;
+    }
+    for (int i = rows.size() - 1; i >= 0; --i) {
+        m_model->removeRow(rows[i]);
+    }
+    m_btnSelectAll->setText("全选");
 }

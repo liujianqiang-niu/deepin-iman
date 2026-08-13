@@ -25,3 +25,7 @@ QList<FavoriteItem> FavoriteService::list() const {
 void FavoriteService::clearAll() {
     m_db->clearAll();
 }
+
+void FavoriteService::deleteByIds(const QList<int>& ids) {
+    m_db->deleteByIds(ids);
+}

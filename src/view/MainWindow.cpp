@@ -393,12 +393,15 @@ void MainWindow::onShowFavorites() {
         m_aiPanel->appendMessage("系统", "暂无收藏");
         return;
     }
-    auto* dlg = new PageListDialog("收藏列表 — 双击跳转", this);
+    auto* dlg = new PageListDialog("收藏列表 — 双击跳转，勾选删除", this);
     dlg->setFavorites(items);
     connect(dlg, &PageListDialog::pageSelected, this, [this](const QString& name, int section) {
         openPage(name, section);
     });
-    connect(dlg, &PageListDialog::favoriteDeleted, this, &MainWindow::onFavoriteDeleted);
+    connect(dlg, &PageListDialog::favoritesDeleted, this, [this](const QList<int>& ids) {
+        m_favSvc->deleteByIds(ids);
+        m_aiPanel->appendMessage("系统", QString("已删除 %1 个收藏").arg(ids.size()));
+    });
     dlg->exec();
     dlg->deleteLater();
 }
@@ -409,10 +412,14 @@ void MainWindow::onShowHistory() {
         m_aiPanel->appendMessage("系统", "暂无浏览历史");
         return;
     }
-    auto* dlg = new PageListDialog("浏览历史 — 双击跳转", this);
+    auto* dlg = new PageListDialog("浏览历史 — 双击跳转，勾选删除", this);
     dlg->setHistory(items);
     connect(dlg, &PageListDialog::pageSelected, this, [this](const QString& name, int section) {
         openPage(name, section);
+    });
+    connect(dlg, &PageListDialog::historyDeleted, this, [this](const QList<int>& ids) {
+        m_histSvc->deleteByIds(ids);
+        m_aiPanel->appendMessage("系统", QString("已删除 %1 条历史").arg(ids.size()));
     });
     dlg->exec();
     dlg->deleteLater();
@@ -476,9 +483,4 @@ void MainWindow::onDataManage() {
     if (dlg.clearIndex()) {
         m_aiPanel->appendMessage("系统", "索引已清空，下次启动时将自动重新扫描");
     }
-}
-
-void MainWindow::onFavoriteDeleted(int pageId) {
-    m_favSvc->remove(pageId);
-    m_aiPanel->appendMessage("系统", "已删除该收藏");
 }
