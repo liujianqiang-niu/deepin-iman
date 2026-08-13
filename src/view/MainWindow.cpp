@@ -30,6 +30,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QScrollBar>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
                        AiService* aiSvc, TranslationService* trSvc,
@@ -320,9 +321,85 @@ void MainWindow::updateAiModelInfo() {
     }
 }
 
+QString MainWindow::markdownToHtml(const QString& md) {
+    QString html = md;
+    html.replace('&', "&amp;");
+    html.replace('<', "&lt;");
+    html.replace('>', "&gt;");
+
+    // 代码块 ```
+    {
+        QRegularExpression codeBlockRe("```(\\w*)\\n(.*?)```",
+            QRegularExpression::DotMatchesEverythingOption);
+        auto it = codeBlockRe.globalMatch(html);
+        QString result;
+        int lastEnd = 0;
+        while (it.hasNext()) {
+            auto m = it.next();
+            result += html.mid(lastEnd, m.capturedStart() - lastEnd);
+            result += QString("<pre><tt>%1</tt></pre>").arg(m.captured(2).trimmed());
+            lastEnd = m.capturedEnd();
+        }
+        result += html.mid(lastEnd);
+        html = result;
+    }
+
+    // 标题 ### / ## / #
+    html.replace(QRegularExpression("(?:^|\\n)###\\s+(.*?)(?:\\n|$)"), "<h3>\\1</h3>");
+    html.replace(QRegularExpression("(?:^|\\n)##\\s+(.*?)(?:\\n|$)"), "<h2>\\1</h2>");
+    html.replace(QRegularExpression("(?:^|\\n)#\\s+(.*?)(?:\\n|$)"), "<h1>\\1</h1>");
+
+    // 行内代码 `code`
+    html.replace(QRegularExpression("`([^`]+)`"), "<tt>\\1</tt>");
+
+    // 粗体 **text**
+    html.replace(QRegularExpression("\\*\\*(.+?)\\*\\*"), "<b>\\1</b>");
+
+    // 斜体 *text*
+    html.replace(QRegularExpression("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)"), "<i>\\1</i>");
+
+    // 无序列表
+    QStringList lines = html.split('\n');
+    QStringList out;
+    bool inList = false;
+    QRegularExpression numItemRe("^\\d+\\.\\s");
+    for (const auto& line : lines) {
+        if (line.trimmed().startsWith("- ") || line.trimmed().startsWith("* ")) {
+            if (!inList) { out << "<ul>"; inList = true; }
+            out << QString("<li>%1</li>").arg(line.trimmed().mid(2));
+        } else if (numItemRe.match(line.trimmed()).hasMatch()) {
+            if (!inList) { out << "<ul>"; inList = true; }
+            out << QString("<li>%1</li>").arg(line.trimmed().replace(numItemRe, ""));
+        } else {
+            if (inList) { out << "</ul>"; inList = false; }
+            out << line;
+        }
+    }
+    if (inList) out << "</ul>";
+    html = out.join('\n');
+
+    // 段落：连续两个换行变 <p>
+    html.replace("\n\n", "</p><p>");
+    html = QString("<p>%1</p>").arg(html);
+    html.replace("<p></p>", "");
+    html.replace("<p><h", "<h");
+    html.replace("</h3></p>", "</h3>");
+    html.replace("</h2></p>", "</h2>");
+    html.replace("</h1></p>", "</h1>");
+    html.replace("<p><pre>", "<pre>");
+    html.replace("</pre></p>", "</pre>");
+    html.replace("<p><ul>", "<ul>");
+    html.replace("</ul></p>", "</ul>");
+    html.replace("<p><li>", "<li>");
+    html.replace("</li></p>", "</li>");
+
+    return html;
+}
+
 void MainWindow::showResultPanel(const QString& title, const QString& content) {
+    QString html = markdownToHtml(content);
     m_resultView->setDocumentTitle(title);
-    m_resultView->setPlainText(content);
+    m_resultView->setHtml(html);
     m_resultView->setVisible(true);
     m_resultCloseBtn->setVisible(true);
 }
