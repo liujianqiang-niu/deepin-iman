@@ -47,7 +47,7 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
     m_reply = m_nam.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
     m_reply->setReadBufferSize(0);
 
-    QTimer::singleShot(60000, m_reply, [this]() {
+    QTimer::singleShot(120000, m_reply, [this]() {
         if (m_reply && m_reply->isRunning()) m_reply->abort();
     });
 

@@ -39,6 +39,7 @@ set(APP_SOURCES
     src/view/SettingsDialog.cpp
     src/view/TranslationView.cpp
     src/view/ResultViewDialog.cpp
+    src/view/SplitViewDialog.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES} resources.qrc)

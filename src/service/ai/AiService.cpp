@@ -198,12 +198,28 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
     }
     if (manText.isEmpty()) manText = page.title;
 
-    if (manText.length() > 8000) manText = manText.left(8000) + "\n\n[...内容过长，已截断...]";
+    if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
 
-    QString user = QString("请将以下 man 手册页翻译为%1，保留所有 man 结构标记（.SH/.SS/.TP 等）：\n\n"
+    QString user = QString("请将以下 man 手册页的英文内容翻译为%1。\n"
+                           "要求：\n"
+                           "1. 保留原文的段落结构\n"
+                           "2. 保留所有命令、参数、选项不翻译\n"
+                           "3. 翻译要准确通顺，符合中文技术文档习惯\n\n"
                            "命令：%2(%3)\n\n%4")
                        .arg(langName).arg(page.name).arg(page.section).arg(manText);
-    callAi(sys, user, onChunk, onDone, onError);
+
+    AiRequest req;
+    req.systemPrompt = sys;
+    req.prompt = user;
+    req.maxTokens = 4096;
+    req.temperature = 0.3;
+
+    auto* p = activeProviderPtr();
+    if (!p || !p->isConfigured()) {
+        onError("AI 供应商未配置，请在设置中填写 Base URL 和 API Key");
+        return;
+    }
+    p->chat(req, onChunk, onDone, onError);
 }
 
 void AiService::generateExamples(const ManPage& page,
@@ -214,7 +230,19 @@ void AiService::generateExamples(const ManPage& page,
     QString user = QString("为以下命令生成 3-5 个使用样例，每个样例包含：命令、注释说明、预期输出：\n\n"
                            "命令：%1(%2)\n\n%3")
                        .arg(page.name).arg(page.section).arg(page.title);
-    callAi(sys, user, onChunk, onDone, onError);
+
+    AiRequest req;
+    req.systemPrompt = sys;
+    req.prompt = user;
+    req.maxTokens = 4096;
+    req.temperature = 0.5;
+
+    auto* p = activeProviderPtr();
+    if (!p || !p->isConfigured()) {
+        onError("AI 供应商未配置，请在设置中填写 Base URL 和 API Key");
+        return;
+    }
+    p->chat(req, onChunk, onDone, onError);
 }
 
 void AiService::askQuestion(const ManPage& page, const QString& question,
