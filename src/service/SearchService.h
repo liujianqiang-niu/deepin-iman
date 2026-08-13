@@ -11,7 +11,8 @@ class SearchService : public QObject {
 public:
     explicit SearchService(ManIndex* index, QObject* parent = nullptr);
 
-    QList<ManPage> search(const QString& query, int limit = 50) const;
+    QList<ManPage> search(const QString& query, int limit = 50,
+                          bool caseSensitive = false, bool wholeWord = false) const;
     void openPage(const QString& name, int section);
 
 signals:

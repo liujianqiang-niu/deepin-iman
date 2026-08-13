@@ -21,7 +21,7 @@ public:
     ~FavoriteDb();
 
     bool open();
-    bool add(int pageId, const QString& note, const QString& tags);
+    bool add(int pageId, const QString& pageName, int pageSection, const QString& note, const QString& tags);
     bool remove(int pageId);
     bool isFavorite(int pageId) const;
     QList<FavoriteItem> list() const;

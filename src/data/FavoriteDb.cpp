@@ -32,15 +32,21 @@ void FavoriteDb::createSchema() {
     q.exec("CREATE TABLE IF NOT EXISTS favorite ("
            "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
            "  page_id INTEGER NOT NULL,"
+           "  page_name TEXT,"
+           "  page_section INTEGER,"
            "  note TEXT,"
            "  tags TEXT,"
            "  created_at INTEGER NOT NULL)");
+    q.exec("ALTER TABLE favorite ADD COLUMN page_name TEXT");
+    q.exec("ALTER TABLE favorite ADD COLUMN page_section INTEGER");
 }
 
-bool FavoriteDb::add(int pageId, const QString& note, const QString& tags) {
+bool FavoriteDb::add(int pageId, const QString& pageName, int pageSection, const QString& note, const QString& tags) {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.prepare("INSERT INTO favorite (page_id, note, tags, created_at) VALUES (?, ?, ?, ?)");
+    q.prepare("INSERT INTO favorite (page_id, page_name, page_section, note, tags, created_at) VALUES (?, ?, ?, ?, ?, ?)");
     q.addBindValue(pageId);
+    q.addBindValue(pageName);
+    q.addBindValue(pageSection);
     q.addBindValue(note);
     q.addBindValue(tags);
     q.addBindValue(QDateTime::currentSecsSinceEpoch());
@@ -64,17 +70,17 @@ bool FavoriteDb::isFavorite(int pageId) const {
 QList<FavoriteItem> FavoriteDb::list() const {
     QList<FavoriteItem> results;
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.exec("SELECT f.id, f.page_id, f.note, f.tags, f.created_at, m.name, m.section "
-           "FROM favorite f LEFT JOIN man_page m ON f.page_id = m.id ORDER BY f.created_at DESC");
+    q.exec("SELECT id, page_id, page_name, page_section, note, tags, created_at "
+           "FROM favorite ORDER BY created_at DESC");
     while (q.next()) {
         FavoriteItem item;
         item.id = q.value(0).toInt();
         item.pageId = q.value(1).toInt();
-        item.note = q.value(2).toString();
-        item.tags = q.value(3).toString();
-        item.createdAt = q.value(4).toLongLong();
-        item.pageName = q.value(5).toString();
-        item.pageSection = q.value(6).toInt();
+        item.pageName = q.value(2).toString();
+        item.pageSection = q.value(3).toInt();
+        item.note = q.value(4).toString();
+        item.tags = q.value(5).toString();
+        item.createdAt = q.value(6).toLongLong();
         results << item;
     }
     return results;

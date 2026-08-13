@@ -6,8 +6,8 @@ FavoriteService::FavoriteService(FavoriteDb* db, QObject* parent)
 {
 }
 
-bool FavoriteService::add(int pageId, const QString& note, const QString& tags) {
-    return m_db->add(pageId, note, tags);
+bool FavoriteService::add(int pageId, const QString& pageName, int pageSection, const QString& note, const QString& tags) {
+    return m_db->add(pageId, pageName, pageSection, note, tags);
 }
 
 bool FavoriteService::remove(int pageId) {

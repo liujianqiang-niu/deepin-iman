@@ -2,13 +2,14 @@
 #include "SearchService.h"
 #include "data/ManIndex.h"
 #include <QSet>
+#include <QRegularExpression>
 
 SearchService::SearchService(ManIndex* index, QObject* parent)
     : QObject(parent), m_index(index)
 {
 }
 
-QList<ManPage> SearchService::search(const QString& query, int limit) const {
+QList<ManPage> SearchService::search(const QString& query, int limit, bool caseSensitive, bool wholeWord) const {
     QList<ManPage> results;
     QString q = query.trimmed();
     if (q.isEmpty()) return results;
@@ -26,6 +27,13 @@ QList<ManPage> SearchService::search(const QString& query, int limit) const {
         auto byLike = m_index->findByNameLike(q);
         for (const auto& p : byLike) {
             if (!seenIds.contains(p.id)) {
+                if (caseSensitive && !p.name.contains(q, Qt::CaseSensitive)) continue;
+                if (wholeWord) {
+                    QRegularExpression re(QString("\\b%1\\b").arg(QRegularExpression::escape(q)),
+                                         caseSensitive ? QRegularExpression::NoPatternOption
+                                                       : QRegularExpression::CaseInsensitiveOption);
+                    if (!re.match(p.name).hasMatch()) continue;
+                }
                 results << p;
                 seenIds << p.id;
             }

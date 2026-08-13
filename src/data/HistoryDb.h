@@ -21,9 +21,10 @@ public:
     ~HistoryDb();
 
     bool open();
-    void recordVisit(int pageId);
+    void recordVisit(int pageId, const QString& pageName, int pageSection);
     QList<HistoryItem> recent(int limit = 50) const;
     QList<HistoryItem> since(qint64 timestamp) const;
+    void cleanup(int keepCount = 100);
 
 private:
     QString m_dbPath;

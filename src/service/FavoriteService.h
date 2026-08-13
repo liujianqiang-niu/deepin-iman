@@ -7,7 +7,7 @@ class FavoriteService : public QObject {
     Q_OBJECT
 public:
     explicit FavoriteService(FavoriteDb* db, QObject* parent = nullptr);
-    bool add(int pageId, const QString& note, const QString& tags);
+    bool add(int pageId, const QString& pageName, int pageSection, const QString& note, const QString& tags);
     bool remove(int pageId);
     bool isFavorite(int pageId) const;
     QList<FavoriteItem> list() const;

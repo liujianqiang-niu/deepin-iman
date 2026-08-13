@@ -24,6 +24,7 @@ bool HistoryDb::open() {
     QSqlQuery q(m_db);
     q.exec("PRAGMA journal_mode=WAL");
     createSchema();
+    cleanup(100);
     return true;
 }
 
@@ -32,16 +33,22 @@ void HistoryDb::createSchema() {
     q.exec("CREATE TABLE IF NOT EXISTS history ("
            "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
            "  page_id INTEGER NOT NULL,"
+           "  page_name TEXT,"
+           "  page_section INTEGER,"
            "  visited_at INTEGER NOT NULL,"
            "  duration_sec INTEGER,"
            "  ai_interactions INTEGER DEFAULT 0)");
+    q.exec("ALTER TABLE history ADD COLUMN page_name TEXT");
+    q.exec("ALTER TABLE history ADD COLUMN page_section INTEGER");
     q.exec("CREATE INDEX IF NOT EXISTS idx_history_visited ON history(visited_at DESC)");
 }
 
-void HistoryDb::recordVisit(int pageId) {
+void HistoryDb::recordVisit(int pageId, const QString& pageName, int pageSection) {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.prepare("INSERT INTO history (page_id, visited_at, duration_sec, ai_interactions) VALUES (?, ?, 0, 0)");
+    q.prepare("INSERT INTO history (page_id, page_name, page_section, visited_at, duration_sec, ai_interactions) VALUES (?, ?, ?, ?, 0, 0)");
     q.addBindValue(pageId);
+    q.addBindValue(pageName);
+    q.addBindValue(pageSection);
     q.addBindValue(QDateTime::currentSecsSinceEpoch());
     q.exec();
 }
@@ -49,20 +56,19 @@ void HistoryDb::recordVisit(int pageId) {
 QList<HistoryItem> HistoryDb::recent(int limit) const {
     QList<HistoryItem> results;
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.prepare("SELECT h.id, h.page_id, h.visited_at, h.duration_sec, h.ai_interactions, m.name, m.section "
-              "FROM history h LEFT JOIN man_page m ON h.page_id = m.id "
-              "ORDER BY h.visited_at DESC LIMIT ?");
+    q.prepare("SELECT id, page_id, page_name, page_section, visited_at, duration_sec, ai_interactions "
+              "FROM history ORDER BY visited_at DESC LIMIT ?");
     q.addBindValue(limit);
     q.exec();
     while (q.next()) {
         HistoryItem item;
         item.id = q.value(0).toInt();
         item.pageId = q.value(1).toInt();
-        item.visitedAt = q.value(2).toLongLong();
-        item.durationSec = q.value(3).toInt();
-        item.aiInteractions = q.value(4).toInt();
-        item.pageName = q.value(5).toString();
-        item.pageSection = q.value(6).toInt();
+        item.pageName = q.value(2).toString();
+        item.pageSection = q.value(3).toInt();
+        item.visitedAt = q.value(4).toLongLong();
+        item.durationSec = q.value(5).toInt();
+        item.aiInteractions = q.value(6).toInt();
         results << item;
     }
     return results;
@@ -71,21 +77,27 @@ QList<HistoryItem> HistoryDb::recent(int limit) const {
 QList<HistoryItem> HistoryDb::since(qint64 timestamp) const {
     QList<HistoryItem> results;
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.prepare("SELECT h.id, h.page_id, h.visited_at, h.duration_sec, h.ai_interactions, m.name, m.section "
-              "FROM history h LEFT JOIN man_page m ON h.page_id = m.id "
-              "WHERE h.visited_at >= ? ORDER BY h.visited_at DESC");
+    q.prepare("SELECT id, page_id, page_name, page_section, visited_at, duration_sec, ai_interactions "
+              "FROM history WHERE visited_at >= ? ORDER BY visited_at DESC");
     q.addBindValue(timestamp);
     q.exec();
     while (q.next()) {
         HistoryItem item;
         item.id = q.value(0).toInt();
         item.pageId = q.value(1).toInt();
-        item.visitedAt = q.value(2).toLongLong();
-        item.durationSec = q.value(3).toInt();
-        item.aiInteractions = q.value(4).toInt();
-        item.pageName = q.value(5).toString();
-        item.pageSection = q.value(6).toInt();
+        item.pageName = q.value(2).toString();
+        item.pageSection = q.value(3).toInt();
+        item.visitedAt = q.value(4).toLongLong();
+        item.durationSec = q.value(5).toInt();
+        item.aiInteractions = q.value(6).toInt();
         results << item;
     }
     return results;
+}
+
+void HistoryDb::cleanup(int keepCount) {
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.prepare("DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY visited_at DESC LIMIT ?)");
+    q.addBindValue(keepCount);
+    q.exec();
 }

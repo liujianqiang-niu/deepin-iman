@@ -5,7 +5,6 @@
 #include "AiChatWidget.h"
 #include "SettingsDialog.h"
 #include "ResultViewDialog.h"
-#include "SplitViewDialog.h"
 #include "PageListDialog.h"
 #include "data/ManIndex.h"
 #include "service/SearchService.h"
@@ -30,6 +29,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDateTime>
+#include <QScrollBar>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
                        AiService* aiSvc, TranslationService* trSvc,
@@ -79,15 +79,20 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
 
     m_sidebar = new LeftSidebar;
     m_manView = new ManView;
+    m_resultView = new QTextBrowser;
+    m_resultView->setVisible(false);
+    m_resultView->setOpenExternalLinks(true);
     m_aiPanel = new AiChatWidget;
 
     mainSplitter->addWidget(m_sidebar);
     mainSplitter->addWidget(m_manView);
+    mainSplitter->addWidget(m_resultView);
     mainSplitter->addWidget(m_aiPanel);
     mainSplitter->setStretchFactor(0, 0);
     mainSplitter->setStretchFactor(1, 1);
-    mainSplitter->setStretchFactor(2, 0);
-    mainSplitter->setSizes({240, 700, 360});
+    mainSplitter->setStretchFactor(2, 1);
+    mainSplitter->setStretchFactor(3, 0);
+    mainSplitter->setSizes({240, 500, 500, 360});
 
     setCentralWidget(mainSplitter);
     resize(1400, 850);
@@ -99,7 +104,11 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
     updateAiModelInfo();
 
-    connect(m_sidebar, &LeftSidebar::searchRequested, this, &MainWindow::onSearchRequested);
+    connect(m_sidebar, &LeftSidebar::searchRequested, this,
+        [this](const QString& query, bool caseSensitive, bool wholeWord) {
+            auto results = m_searchSvc->search(query, 50, caseSensitive, wholeWord);
+            m_sidebar->setManPages(results);
+        });
     connect(m_sidebar, &LeftSidebar::pageSelected, this, &MainWindow::onPageSelected);
     connect(m_manView, &ManView::crossReferenceClicked, this, &MainWindow::onCrossRefClicked);
     connect(m_manSvc, &ManService::pageRendered, this, &MainWindow::onPageRendered);
@@ -119,11 +128,6 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     connect(nextSc, &QShortcut::activated, this, &MainWindow::onNextPage);
 }
 
-void MainWindow::onSearchRequested(const QString& query) {
-    auto results = m_searchSvc->search(query, 50);
-    m_sidebar->setManPages(results);
-}
-
 void MainWindow::onPageSelected(const QString& name, int section) {
     openPage(name, section);
 }
@@ -141,7 +145,7 @@ void MainWindow::openPage(const QString& name, int section) {
             m_currentPageId = p.id;
             m_manSvc->renderPageAsync(p.sourcePath);
             m_aiPanel->setCurrentPage(p);
-            m_histSvc->recordVisit(p.id);
+            m_histSvc->recordVisit(p.id, p.name, p.section);
             setWindowTitle(QString("%1(%2) - deepin man 手册").arg(p.name).arg(p.section));
             updateNavButtons();
             return;
@@ -204,8 +208,9 @@ void MainWindow::onToggleFavorite() {
         m_favSvc->remove(m_currentPageId);
         m_aiPanel->appendMessage("系统", "已取消收藏");
     } else {
-        m_favSvc->add(m_currentPageId, QString(), QString());
-        m_aiPanel->appendMessage("系统", "已收藏当前页");
+        ManPage p = m_index->findById(m_currentPageId);
+        m_favSvc->add(m_currentPageId, p.name, p.section, QString(), QString());
+        m_aiPanel->appendMessage("系统", QString("已收藏 %1(%2)").arg(p.name).arg(p.section));
     }
 }
 
@@ -222,17 +227,16 @@ void MainWindow::onTranslateRequested(const ManPage& page, const QString& target
     }
     if (originalText.isEmpty()) originalText = page.title;
 
+    showResultPanel(QString("原文：%1(%2)").arg(page.name).arg(page.section), originalText);
+
     m_trSvc->getTranslation(page, targetLang,
-        [this, page, targetLang, originalText](const QString& result) {
-            m_aiPanel->appendMessage("系统", QString("翻译完成，已弹出对照窗口。"));
-            QString leftTitle = QString("原文：%1(%2)").arg(page.name).arg(page.section);
-            QString rightTitle = QString("%1翻译").arg(targetLang);
-            auto* dlg = new SplitViewDialog(leftTitle, originalText, rightTitle, result, this);
-            dlg->exec();
-            dlg->deleteLater();
+        [this, page, targetLang](const QString& result) {
+            m_aiPanel->appendMessage("系统", QString("翻译完成，右侧面板已显示。"));
+            showResultPanel(QString("翻译：%1(%2) → %3").arg(page.name).arg(page.section).arg(targetLang), result);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
+            hideResultPanel();
         });
 }
 
@@ -249,18 +253,17 @@ void MainWindow::onExamplesRequested(const ManPage& page) {
     }
     if (originalText.isEmpty()) originalText = page.title;
 
+    showResultPanel(QString("原文：%1(%2)").arg(page.name).arg(page.section), originalText);
+
     auto* exampleSvc = new ExampleService(m_aiSvc, this);
     exampleSvc->generateExamples(page,
-        [this, page, originalText](const QString& result) {
-            m_aiPanel->appendMessage("系统", "样例生成完成，已弹出对照窗口。");
-            QString leftTitle = QString("原文：%1(%2)").arg(page.name).arg(page.section);
-            QString rightTitle = "AI 使用样例";
-            auto* dlg = new SplitViewDialog(leftTitle, originalText, rightTitle, result, this);
-            dlg->exec();
-            dlg->deleteLater();
+        [this, page](const QString& result) {
+            m_aiPanel->appendMessage("系统", "样例生成完成，右侧面板已显示。");
+            showResultPanel(QString("样例：%1(%2)").arg(page.name).arg(page.section), result);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
+            hideResultPanel();
         });
 }
 
@@ -302,6 +305,25 @@ void MainWindow::updateAiModelInfo() {
     } else {
         m_aiPanel->setProviderModelInfo("未配置", "");
     }
+}
+
+void MainWindow::showResultPanel(const QString& title, const QString& content) {
+    m_resultView->setDocumentTitle(title);
+    m_resultView->setPlainText(content);
+    m_resultView->setVisible(true);
+
+    auto* srcBar = m_manView->verticalScrollBar();
+    auto* dstBar = m_resultView->verticalScrollBar();
+    srcBar->disconnect(this);
+    dstBar->disconnect(this);
+    connect(srcBar, &QScrollBar::valueChanged, dstBar, &QScrollBar::setValue);
+    connect(dstBar, &QScrollBar::valueChanged, srcBar, &QScrollBar::setValue);
+}
+
+void MainWindow::hideResultPanel() {
+    m_resultView->setVisible(false);
+    m_manView->verticalScrollBar()->disconnect(this);
+    m_resultView->verticalScrollBar()->disconnect(this);
 }
 
 void MainWindow::onRefreshIndex() {

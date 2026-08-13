@@ -3,6 +3,7 @@
 #include <DMainWindow>
 #include <DIconButton>
 #include <QStack>
+#include <QTextBrowser>
 #include "data/ManIndex.h"
 
 DWIDGET_USE_NAMESPACE
@@ -31,7 +32,6 @@ public:
                         QWidget* parent = nullptr);
 
 private slots:
-    void onSearchRequested(const QString& query);
     void onPageSelected(const QString& name, int section);
     void onCrossRefClicked(const QString& name, int section);
     void onPageRendered(const QString& html);
@@ -50,6 +50,7 @@ private slots:
 private:
     LeftSidebar* m_sidebar;
     ManView* m_manView;
+    QTextBrowser* m_resultView;
     AiChatWidget* m_aiPanel;
 
     ManIndex* m_index;
@@ -70,4 +71,6 @@ private:
     void openPage(const QString& name, int section);
     void updateNavButtons();
     void updateAiModelInfo();
+    void showResultPanel(const QString& title, const QString& content);
+    void hideResultPanel();
 };

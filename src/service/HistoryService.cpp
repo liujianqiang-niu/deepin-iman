@@ -6,8 +6,8 @@ HistoryService::HistoryService(HistoryDb* db, QObject* parent)
 {
 }
 
-void HistoryService::recordVisit(int pageId) {
-    m_db->recordVisit(pageId);
+void HistoryService::recordVisit(int pageId, const QString& pageName, int pageSection) {
+    m_db->recordVisit(pageId, pageName, pageSection);
 }
 
 QList<HistoryItem> HistoryService::recent(int limit) const {
