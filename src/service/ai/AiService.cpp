@@ -11,6 +11,7 @@
 #include <QUuid>
 #include <QProcess>
 #include <QSharedPointer>
+#include <QSet>
 
 AiService::AiService(QObject* parent) : QObject(parent) {
 }
@@ -222,23 +223,53 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
         return;
     }
 
-    QStringList sections;
-    QStringList lines = manText.split('\n');
-    QString current;
-    for (const auto& line : lines) {
-        QString trimmed = line.trimmed();
-        bool isHeader = !trimmed.isEmpty() && trimmed == trimmed.toUpper()
-                        && trimmed.length() < 40 && trimmed.contains(QRegularExpression("^[A-Z]"));
-        if (isHeader && !current.isEmpty()) {
-            sections << current;
-            current = line + "\n";
-        } else {
-            current += line + "\n";
-        }
-    }
-    if (!current.isEmpty()) sections << current;
+    // 按 man 手册标准章节标题分段（精确匹配，避免误判大写内容行）
+    static const QStringList sectionHeaders = {
+        "NAME", "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES",
+        "EXIT STATUS", "ENVIRONMENT", "FILES", "ATTRIBUTES", "SEE ALSO",
+        "BUGS", "RETURN VALUE", "RETURN VALUES", "ERRORS", "CONFORMING TO",
+        "NOTES", "COLOPHON", "HISTORY", "AUTHORS", "COPYRIGHT", "VERSIONS",
+        "STANDARDS", "CAVEATS", "WARNINGS", "DIAGNOSTICS", "SECURITY"
+    };
+    QSet<QString> headerSet(sectionHeaders.begin(), sectionHeaders.end());
 
-    if (sections.size() <= 1) {
+    QStringList sections;
+    {
+        QStringList lines = manText.split('\n');
+        QString current;
+        for (const auto& line : lines) {
+            QString trimmed = line.trimmed();
+            if (headerSet.contains(trimmed) && !current.isEmpty()) {
+                sections << current;
+                current = line + "\n";
+            } else {
+                current += line + "\n";
+            }
+        }
+        if (!current.isEmpty()) sections << current;
+    }
+
+    // 每段超过 2000 字符则按空行二次拆分，确保不超 AI 输出限制
+    const int CHUNK_LIMIT = 2000;
+    QStringList finalSections;
+    for (const auto& sec : sections) {
+        if (sec.length() <= CHUNK_LIMIT) {
+            finalSections << sec;
+            continue;
+        }
+        QStringList paragraphs = sec.split("\n\n");
+        QString buf;
+        for (const auto& para : paragraphs) {
+            if (buf.length() + para.length() + 2 > CHUNK_LIMIT && !buf.isEmpty()) {
+                finalSections << buf;
+                buf.clear();
+            }
+            buf += para + "\n\n";
+        }
+        if (!buf.trimmed().isEmpty()) finalSections << buf;
+    }
+
+    if (finalSections.size() <= 1) {
         AiRequest req;
         req.systemPrompt = sys;
         req.prompt = buildPrompt(manText);
@@ -248,7 +279,7 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
         return;
     }
 
-    int total = sections.size();
+    int total = finalSections.size();
     auto results = QSharedPointer<QStringList>::create();
     results->resize(total);
     auto done = QSharedPointer<int>::create(0);
@@ -257,7 +288,7 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
     for (int i = 0; i < total; ++i) {
         AiRequest req;
         req.systemPrompt = sys;
-        req.prompt = buildPrompt(sections[i]);
+        req.prompt = buildPrompt(finalSections[i]);
         req.maxTokens = 8192;
         req.temperature = 0.3;
 
@@ -267,7 +298,7 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
                 (*results)[i] = result.text;
                 ++(*done);
                 if (*done >= total) {
-                    QString full = results->join("\n\n");
+                    QString full = results->join("");
                     AiResult finalResult;
                     finalResult.text = full;
                     finalResult.model = result.model;
