@@ -31,6 +31,17 @@ cmake --build .
 - mandoc (man page → HTML)
 - SQLite3 with FTS5
 
+### Man page packages (auto-installed)
+
+| Package | Scope |
+|---------|-------|
+| `manpages` | Standard system command man pages (required) |
+| `manpages-dev` | C library / development man pages (required) |
+| `manpages-posix` | POSIX standard man pages (recommended) |
+| `manpages-posix-dev` | POSIX development man pages (recommended) |
+| `manpages-zh` or `manpages-cn` | Chinese man pages (recommended) |
+| `glibc-doc` | GNU C library documentation (recommended) |
+
 ## Install
 
 ```bash

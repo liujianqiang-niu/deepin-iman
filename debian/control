@@ -24,21 +24,25 @@ Depends:
     ${shlibs:Depends},
     ${misc:Depends},
     mandoc,
+    manpages,
+    manpages-dev,
 Recommends:
     manpages-zh | manpages-cn,
-    libqtermwidget6-2,
-Description: AI-powered man page viewer for deepin
- deepin-iman is a man page browser that deeply integrates AI capabilities
- with traditional man page experience. It allows users to browse, search,
- and navigate all man pages, and leverages AI to provide Chinese translation,
- usage examples, command Q&A, and command parsing.
- .
- Key features:
-  * Full-text search across all man pages (SQLite FTS5)
-  * Cross-reference navigation (SEE ALSO links)
-  * AI-powered translation (multi-provider: OpenAI/Claude/Qwen/GLM)
-  * Chinese + English side-by-side view
-  * AI-generated usage examples
-  * Embedded terminal
-  * Cheat sheet generation
-  * Learning history with AI weekly reports
+    manpages-posix,
+    manpages-posix-dev,
+    glibc-doc,
+ Description: AI-powered man page viewer for deepin
+  deepin-iman is a man page browser that deeply integrates AI capabilities
+  with traditional man page experience. It allows users to browse, search,
+  and navigate all man pages, and leverages AI to provide multi-language
+  translation, usage examples, command Q&A, and command parsing.
+  .
+  Key features:
+   * Full-text search with case-sensitivity and whole-word match toggles
+   * Cross-reference navigation (SEE ALSO links)
+   * AI-powered translation (user-configurable OpenAI-compatible providers)
+   * Inline split view for translation and examples
+   * AI-generated usage examples
+   * AI Q&A and command parsing
+   * Favorites and browse history (auto-trimmed to 100 entries)
+   * Auto index update on startup plus manual refresh
