@@ -376,20 +376,33 @@ void AiService::askQuestion(const ManPage& page, const QString& question,
         return;
     }
 
-    // 超长手册截取核心段落，确保不超模型 context window
     const int CONTEXT_LIMIT = 8000;
     if (manText.length() > CONTEXT_LIMIT) {
         int cutPos = manText.indexOf("\n\n", CONTEXT_LIMIT);
         if (cutPos < 0 || cutPos > CONTEXT_LIMIT + 2000) cutPos = CONTEXT_LIMIT;
-        manText = manText.left(cutPos) + "\n\n[...手册内容较长，已截取核心部分，如需更多细节请缩小问题范围...]";
+        manText = manText.left(cutPos) + "\n\n[...手册内容较长，已截取核心部分...]";
     }
 
-    QString user = QString("用户正在查看 %1(%2) 的 man 手册。\n\n"
-                           "手册正文：\n%3\n\n"
-                           "用户问题：%4\n\n"
-                           "请基于上方手册正文内容回答问题，用中文回答，回答要准确实用。")
-                       .arg(page.name).arg(page.section).arg(manText).arg(question);
-    callAi(sys, user, onChunk, onDone, onError);
+    QString user = QString("用户问题：%1\n\n"
+                           "以下是 %2(%3) 的 man 手册正文，请仔细阅读并基于其中的内容直接回答用户问题：\n\n%4\n\n"
+                           "回答要求：\n"
+                           "1. 用中文回答\n"
+                           "2. 紧扣用户问题，不要答非所问\n"
+                           "3. 引用手册中的具体内容\n"
+                           "4. 如有必要给出实际命令示例")
+                       .arg(question).arg(page.name).arg(page.section).arg(manText);
+
+    auto* p = activeProviderPtr();
+    if (!p || !p->isConfigured()) {
+        onError("AI 供应商未配置，请在设置中填写 Base URL 和 API Key");
+        return;
+    }
+    AiRequest req;
+    req.systemPrompt = sys;
+    req.prompt = user;
+    req.maxTokens = 8192;
+    req.temperature = 0.5;
+    p->chat(req, onChunk, onDone, onError);
 }
 
 QString AiService::extractManText(const QString& sourcePath) {

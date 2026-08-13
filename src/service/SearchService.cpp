@@ -33,6 +33,7 @@ QList<ManPage> SearchService::search(const QString& query, int limit, bool caseS
 
     auto byName = m_index->findByName(q);
     for (const auto& p : byName) {
+        if (caseSensitive && p.name != q) continue;
         results << p;
         seenIds << p.id;
         if (results.size() >= limit) return results;
