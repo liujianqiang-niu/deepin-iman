@@ -36,7 +36,7 @@ QString TranslationService::tryPresetPackage(const ManPage& page) const {
 void TranslationService::getTranslation(const ManPage& page, const QString& targetLang,
                                           std::function<void(const QString&, bool)> onReady,
                                           std::function<void(const QString&)> onError) {
-    QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime);
+    QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime, targetLang);
 
     QString cachedSource;
     QString cached = m_cache->get(pageHash, &cachedSource);

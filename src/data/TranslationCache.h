@@ -17,7 +17,7 @@ public:
     void remove(const QString& pageHash);
     void clearAll();
 
-    static QString computeHash(const QString& name, int section, qint64 mtime);
+    static QString computeHash(const QString& name, int section, qint64 mtime, const QString& targetLang = QString());
 
 private:
     QString m_dbPath;

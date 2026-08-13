@@ -194,7 +194,6 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
                     .arg(page.name).arg(page.section));
         return;
     }
-    if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
 
     QString user = QString("请将以下 man 手册页的英文内容翻译为%1。\n"
                            "要求：\n"
@@ -230,7 +229,6 @@ void AiService::generateExamples(const ManPage& page,
                     .arg(page.name).arg(page.section));
         return;
     }
-    if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
 
     static const QMap<int, QString> typeMap = {
         {1, "用户命令（shell 命令）"}, {2, "系统调用（C 语言接口）"},

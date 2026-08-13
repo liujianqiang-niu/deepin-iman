@@ -1,6 +1,7 @@
 // src/main.cpp
 #include <QGuiApplication>
 #include <DApplication>
+#include <DGuiApplicationHelper>
 #include <DDialog>
 #include <DProgressBar>
 #include <DLabel>
@@ -46,6 +47,10 @@ int main(int argc, char* argv[]) {
     app.setApplicationDescription("AI 驱动的 man 手册查看器");
     app.setApplicationLicense("LGPL-3.0+");
     app.setWindowIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
+
+    if (!app.setSingleInstance("deepin-iman")) {
+        return 0;
+    }
 
     QTranslator dtkTranslator;
     if (dtkTranslator.load(QLocale(), "dtkwidget", "_", "/usr/share/dtk6/DWidget/translations")) {
@@ -149,6 +154,13 @@ int main(int argc, char* argv[]) {
     MainWindow w(&index, &searchService, &manService, &aiService, &trService,
                  &favService, &histService);
     w.show();
+
+    QObject::connect(DGuiApplicationHelper::instance(), &DGuiApplicationHelper::newProcessInstance,
+                     &w, [&w](qint64, const QStringList&) {
+        w.show();
+        w.raise();
+        w.activateWindow();
+    });
 
     return app.exec();
 }

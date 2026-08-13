@@ -18,4 +18,7 @@ public:
 
 private:
     AiService* m_ai;
+    static QString cacheFilePath(const ManPage& page);
+    static QString loadFromCache(const ManPage& page);
+    static void saveToCache(const ManPage& page, const QString& text);
 };
