@@ -85,22 +85,40 @@ void AiChatWidget::setCurrentPage(const ManPage& page) {
 
 void AiChatWidget::appendMessage(const QString& role, const QString& content) {
     QString color = (role == "AI") ? "#0066cc" : "#333333";
-    QString msg = QString("<p><b style='color:%1;'>%2:</b> %3</p>").arg(color, role, content.toHtmlEscaped());
+    QString msg = QString("<p><b style='color:%1;'>%2:</b> %3</p>")
+                      .arg(color, role, content.toHtmlEscaped());
     m_chatDisplay->append(msg);
 }
 
 void AiChatWidget::appendAiResult(const QString& role, const QString& content, const QString& model) {
     QString color = (role == "AI") ? "#0066cc" : "#333333";
-    QString modelTag = model.isEmpty() ? "" : QString(" <span style='color:#999; font-size:11px;'>[%1]</span>").arg(model.toHtmlEscaped());
+    QString modelTag = model.isEmpty() ? "" :
+        QString(" <span style='color:#999; font-size:11px;'>[%1]</span>").arg(model.toHtmlEscaped());
 
     QTextDocument doc;
     doc.setMarkdown(content);
-    QString renderedHtml = doc.toHtml();
+    QString fullHtml = doc.toHtml();
+
+    int bodyStart = fullHtml.indexOf("<body>");
+    int bodyEnd = fullHtml.indexOf("</body>");
+    QString bodyHtml = (bodyStart >= 0 && bodyEnd > bodyStart)
+        ? fullHtml.mid(bodyStart + 6, bodyEnd - bodyStart - 6)
+        : fullHtml;
+
+    bodyHtml.prepend("<style>"
+                     "code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-family:monospace;}"
+                     "pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto;}"
+                     "pre code{background:transparent;padding:0;}"
+                     "h1,h2,h3{margin-top:8px;margin-bottom:4px;}"
+                     "ul,ol{margin:4px 0;padding-left:20px;}"
+                     "p{margin:4px 0;}"
+                     "table{border-collapse:collapse;}"
+                     "th,td{border:1px solid #ddd;padding:4px 8px;}"
+                     "</style>");
 
     QString header = QString("<p><b style='color:%1;'>%2:</b>%3</p>").arg(color, role, modelTag);
-
     m_chatDisplay->append(header);
-    m_chatDisplay->insertHtml(renderedHtml);
+    m_chatDisplay->insertHtml(bodyHtml);
     m_chatDisplay->append("");
 }
 
