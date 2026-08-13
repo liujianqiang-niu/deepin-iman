@@ -6,6 +6,7 @@
 #include <QIcon>
 #include <QCheckBox>
 #include <QLabel>
+#include <DLabel>
 
 PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     : DDialog(parent)
@@ -79,17 +80,19 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
 void PageListDialog::refreshCheckboxes() {
     for (int i = 0; i < m_model->rowCount(); ++i) {
         QModelIndex idx = m_model->index(i, 0);
-        if (!m_listView->indexWidget(idx)) {
-            auto* rowWidget = new QWidget;
-            auto* rowLayout = new QHBoxLayout(rowWidget);
-            rowLayout->setContentsMargins(4, 0, 0, 0);
-            rowLayout->setSpacing(6);
-            auto* checkBox = new QCheckBox(m_model->item(i)->text(), rowWidget);
-            checkBox->setProperty("rowIndex", i);
-            rowLayout->addWidget(checkBox);
-            rowLayout->addStretch();
-            m_listView->setIndexWidget(idx, rowWidget);
-        }
+        if (m_listView->indexWidget(idx)) continue;
+
+        auto* rowWidget = new QWidget;
+        auto* rowLayout = new QHBoxLayout(rowWidget);
+        rowLayout->setContentsMargins(4, 0, 0, 0);
+        rowLayout->setSpacing(8);
+
+        auto* checkBox = new QCheckBox(rowWidget);
+        auto* label = new DLabel(m_model->item(i)->text(), rowWidget);
+        rowLayout->addWidget(checkBox);
+        rowLayout->addWidget(label, 1);
+
+        m_listView->setIndexWidget(idx, rowWidget);
     }
 }
 

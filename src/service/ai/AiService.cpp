@@ -367,11 +367,19 @@ void AiService::askQuestion(const ManPage& page, const QString& question,
                               std::function<void(const AiResult&)> onDone,
                               std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("qa");
+
+    QString manText = extractManText(page.sourcePath);
+    if (manText.isEmpty()) {
+        onError(QString("无法提取 %1(%2) 的手册正文，请确认 mandoc 已安装且手册文件存在")
+                    .arg(page.name).arg(page.section));
+        return;
+    }
+
     QString user = QString("用户正在查看 %1(%2) 的 man 手册。\n\n"
-                           "手册标题：%3\n\n"
+                           "手册正文：\n%3\n\n"
                            "用户问题：%4\n\n"
-                           "请基于该 man 手册的内容回答问题。")
-                       .arg(page.name).arg(page.section).arg(page.title).arg(question);
+                           "请基于上方手册正文内容回答问题，用中文回答，回答要准确实用。")
+                       .arg(page.name).arg(page.section).arg(manText).arg(question);
     callAi(sys, user, onChunk, onDone, onError);
 }
 
