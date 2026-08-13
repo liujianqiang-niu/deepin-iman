@@ -4,12 +4,14 @@
 #include <QHBoxLayout>
 #include <QDateTime>
 #include <QIcon>
+#include <QCheckBox>
+#include <QLabel>
 
 PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     : DDialog(parent)
 {
     setTitle(title);
-    setFixedSize(400, 480);
+    setFixedSize(420, 480);
 
     auto* widget = new QWidget;
     auto* layout = new QVBoxLayout(widget);
@@ -53,10 +55,9 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
-        row->setCheckable(true);
-        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
     }
+    refreshCheckboxes();
 }
 
 void PageListDialog::setHistory(const QList<HistoryItem>& items) {
@@ -70,22 +71,42 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
-        row->setCheckable(true);
-        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
+    }
+    refreshCheckboxes();
+}
+
+void PageListDialog::refreshCheckboxes() {
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        QModelIndex idx = m_model->index(i, 0);
+        if (!m_listView->indexWidget(idx)) {
+            auto* rowWidget = new QWidget;
+            auto* rowLayout = new QHBoxLayout(rowWidget);
+            rowLayout->setContentsMargins(4, 0, 0, 0);
+            rowLayout->setSpacing(6);
+            auto* checkBox = new QCheckBox(m_model->item(i)->text(), rowWidget);
+            checkBox->setProperty("rowIndex", i);
+            rowLayout->addWidget(checkBox);
+            rowLayout->addStretch();
+            m_listView->setIndexWidget(idx, rowWidget);
+        }
     }
 }
 
 void PageListDialog::toggleSelectAll() {
     bool anyUnchecked = false;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        auto* item = m_model->item(i);
-        if (item && item->checkState() == Qt::Unchecked) { anyUnchecked = true; break; }
+        QModelIndex idx = m_model->index(i, 0);
+        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
+                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
+        if (cb && !cb->isChecked()) { anyUnchecked = true; break; }
     }
     Qt::CheckState state = anyUnchecked ? Qt::Checked : Qt::Unchecked;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        auto* item = m_model->item(i);
-        if (item) item->setCheckState(state);
+        QModelIndex idx = m_model->index(i, 0);
+        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
+                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
+        if (cb) cb->setChecked(state == Qt::Checked);
     }
     m_btnSelectAll->setText(anyUnchecked ? "取消全选" : "全选");
 }
@@ -93,9 +114,11 @@ void PageListDialog::toggleSelectAll() {
 QList<int> PageListDialog::selectedIds() const {
     QList<int> ids;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        auto* item = m_model->item(i);
-        if (item && item->checkState() == Qt::Checked) {
-            ids << item->data(Qt::UserRole + 2).toInt();
+        QModelIndex idx = m_model->index(i, 0);
+        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
+                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
+        if (cb && cb->isChecked()) {
+            ids << m_model->item(i)->data(Qt::UserRole + 2).toInt();
         }
     }
     return ids;
@@ -113,11 +136,14 @@ void PageListDialog::deleteSelected() {
 
     QList<int> rows;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        auto* item = m_model->item(i);
-        if (item && item->checkState() == Qt::Checked) rows << i;
+        QModelIndex idx = m_model->index(i, 0);
+        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
+                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
+        if (cb && cb->isChecked()) rows << i;
     }
     for (int i = rows.size() - 1; i >= 0; --i) {
         m_model->removeRow(rows[i]);
     }
     m_btnSelectAll->setText("全选");
+    refreshCheckboxes();
 }

@@ -36,6 +36,4 @@ private:
     QString m_apiKey;
     QString m_model;
     QNetworkAccessManager m_nam;
-    QNetworkReply* m_reply = nullptr;
-    QString m_accumulated;
 };

@@ -32,5 +32,6 @@ private:
 
     void toggleSelectAll();
     void deleteSelected();
+    void refreshCheckboxes();
     QList<int> selectedIds() const;
 };

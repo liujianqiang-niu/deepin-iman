@@ -44,24 +44,21 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
     messages.append(QJsonObject{{"role", "user"}, {"content", req.prompt}});
     body["messages"] = messages;
 
-    m_accumulated.clear();
-    m_reply = m_nam.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    QNetworkReply* reply = m_nam.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 
-    QTimer::singleShot(120000, m_reply, [this]() {
-        if (m_reply && m_reply->isRunning()) m_reply->abort();
+    QTimer::singleShot(120000, reply, [reply]() {
+        if (reply && reply->isRunning()) reply->abort();
     });
 
-    connect(m_reply, &QNetworkReply::finished, this, [this, onDone, onError]() {
-        if (m_reply->error() != QNetworkReply::NoError && m_reply->error() != QNetworkReply::OperationCanceledError) {
-            onError(m_reply->errorString());
-            m_reply->deleteLater();
-            m_reply = nullptr;
+    connect(reply, &QNetworkReply::finished, reply, [reply, onDone, onError, model = m_model]() {
+        if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
+            onError(reply->errorString());
+            reply->deleteLater();
             return;
         }
 
-        QByteArray data = m_reply->readAll();
-        m_reply->deleteLater();
-        m_reply = nullptr;
+        QByteArray data = reply->readAll();
+        reply->deleteLater();
 
         auto doc = QJsonDocument::fromJson(data);
         if (!doc.isObject()) {
@@ -95,18 +92,18 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
 
         AiResult result;
         result.text = content;
-        result.model = m_model;
+        result.model = model;
         auto usage = obj.value("usage").toObject();
         result.inputTokens = usage.value("prompt_tokens").toInt();
         result.outputTokens = usage.value("completion_tokens").toInt();
         onDone(result);
     });
 
-    connect(m_reply, &QNetworkReply::errorOccurred, this, [onError](QNetworkReply::NetworkError) {
+    connect(reply, &QNetworkReply::errorOccurred, reply, [onError](QNetworkReply::NetworkError) {
         // handled in finished
     });
 }
 
 void OpenAiCompatibleProvider::cancel() {
-    if (m_reply) m_reply->abort();
+    m_nam.deleteLater();
 }
