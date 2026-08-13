@@ -71,3 +71,8 @@ QWidget* EditorPanel::contentWidget() const {
     if (l && l->count() > 0) return l->itemAt(0)->widget();
     return nullptr;
 }
+
+void EditorPanel::setDetached(bool detached) {
+    m_closeBtn->setVisible(!detached);
+    m_detachBtn->setVisible(!detached);
+}

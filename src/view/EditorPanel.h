@@ -16,6 +16,7 @@ public:
     QString title() const;
     void setContent(QWidget* w);
     QWidget* contentWidget() const;
+    void setDetached(bool detached);
 
 signals:
     void closed();

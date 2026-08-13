@@ -2,6 +2,7 @@
 #pragma once
 #include <DDialog>
 #include <DListView>
+#include <DPushButton>
 #include <QStandardItemModel>
 #include <QList>
 #include "data/FavoriteDb.h"
@@ -24,5 +25,6 @@ signals:
 private:
     DListView* m_listView;
     QStandardItemModel* m_model;
+    DPushButton* m_btnDelete;
     void deleteSelectedFavorite();
 };

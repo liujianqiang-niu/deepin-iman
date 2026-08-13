@@ -23,9 +23,10 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     layout->addWidget(m_listView);
 
     auto* btnLayout = new QHBoxLayout;
-    auto* btnDelete = new DPushButton("删除选中收藏", widget);
+    m_btnDelete = new DPushButton("删除选中收藏", widget);
+    m_btnDelete->setVisible(false);
     btnLayout->addStretch();
-    btnLayout->addWidget(btnDelete);
+    btnLayout->addWidget(m_btnDelete);
     layout->addLayout(btnLayout);
 
     addContent(widget);
@@ -44,10 +45,11 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
             accept();
         }
     });
-    connect(btnDelete, &DPushButton::clicked, this, &PageListDialog::deleteSelectedFavorite);
+    connect(m_btnDelete, &DPushButton::clicked, this, &PageListDialog::deleteSelectedFavorite);
 }
 
 void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
+    m_btnDelete->setVisible(true);
     m_model->clear();
     for (const auto& item : items) {
         if (item.pageName.isEmpty()) continue;
@@ -61,6 +63,7 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
 }
 
 void PageListDialog::setHistory(const QList<HistoryItem>& items) {
+    m_btnDelete->setVisible(false);
     m_model->clear();
     for (const auto& item : items) {
         if (item.pageName.isEmpty()) continue;

@@ -30,6 +30,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QScrollBar>
+#include <QEvent>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
                        AiService* aiSvc, TranslationService* trSvc,
@@ -314,21 +315,18 @@ void MainWindow::detachPanel(EditorPanel* panel) {
     int index = m_mainSplitter->indexOf(panel);
     if (index < 0) return;
 
-    panel->setVisible(false);
     panel->setParent(nullptr);
+    panel->setDetached(true);
 
     auto* win = new DMainWindow;
+    win->setAttribute(Qt::WA_DeleteOnClose);
     win->setWindowTitle(panel->title());
     win->resize(700, 600);
+    win->installEventFilter(this);
     win->setCentralWidget(panel);
     panel->setVisible(true);
 
     m_detachedWindows[panel] = win;
-
-    connect(win, &DMainWindow::destroyed, this, [this, panel]() {
-        reattachPanel(panel);
-    });
-
     win->show();
 }
 
@@ -336,9 +334,9 @@ void MainWindow::reattachPanel(EditorPanel* panel) {
     if (!m_detachedWindows.contains(panel)) return;
 
     auto* win = m_detachedWindows.take(panel);
-    if (win->parent() == nullptr) {
-        panel->setParent(this);
-    }
+
+    panel->setParent(this);
+    panel->setDetached(false);
 
     if (panel == m_manPanel) {
         m_mainSplitter->insertWidget(1, panel);
@@ -346,8 +344,18 @@ void MainWindow::reattachPanel(EditorPanel* panel) {
         m_mainSplitter->insertWidget(2, panel);
     }
     panel->setVisible(true);
+}
 
-    if (win != sender()) win->deleteLater();
+bool MainWindow::eventFilter(QObject* obj, QEvent* event) {
+    if (event->type() == QEvent::Close) {
+        for (auto it = m_detachedWindows.begin(); it != m_detachedWindows.end(); ++it) {
+            if (it.value() == obj) {
+                reattachPanel(it.key());
+                break;
+            }
+        }
+    }
+    return DMainWindow::eventFilter(obj, event);
 }
 
 void MainWindow::onRefreshIndex() {

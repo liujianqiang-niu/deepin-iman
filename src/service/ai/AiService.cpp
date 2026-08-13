@@ -195,26 +195,90 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
         return;
     }
 
-    QString user = QString("请将以下 man 手册页的英文内容翻译为%1。\n"
-                           "要求：\n"
-                           "1. 保留原文的段落结构\n"
-                           "2. 保留所有命令、参数、选项不翻译\n"
-                           "3. 翻译要准确通顺，符合中文技术文档习惯\n\n"
-                           "命令：%2(%3)\n\n%4")
-                       .arg(langName).arg(page.name).arg(page.section).arg(manText);
-
-    AiRequest req;
-    req.systemPrompt = sys;
-    req.prompt = user;
-    req.maxTokens = 4096;
-    req.temperature = 0.3;
-
     auto* p = activeProviderPtr();
     if (!p || !p->isConfigured()) {
         onError("AI 供应商未配置，请在设置中填写 Base URL 和 API Key");
         return;
     }
-    p->chat(req, onChunk, onDone, onError);
+
+    auto buildPrompt = [&](const QString& text) {
+        return QString("请将以下 man 手册页的英文内容翻译为%1。\n"
+                       "要求：\n"
+                       "1. 保留原文的段落结构\n"
+                       "2. 保留所有命令、参数、选项不翻译\n"
+                       "3. 翻译要准确通顺，符合中文技术文档习惯\n\n"
+                       "命令：%2(%3)\n\n%4")
+                   .arg(langName).arg(page.name).arg(page.section).arg(text);
+    };
+
+    if (manText.length() <= 3000) {
+        AiRequest req;
+        req.systemPrompt = sys;
+        req.prompt = buildPrompt(manText);
+        req.maxTokens = 8192;
+        req.temperature = 0.3;
+        p->chat(req, onChunk, onDone, onError);
+        return;
+    }
+
+    QStringList sections;
+    QStringList lines = manText.split('\n');
+    QString current;
+    for (const auto& line : lines) {
+        QString trimmed = line.trimmed();
+        bool isHeader = !trimmed.isEmpty() && trimmed == trimmed.toUpper()
+                        && trimmed.length() < 40 && trimmed.contains(QRegularExpression("^[A-Z]"));
+        if (isHeader && !current.isEmpty()) {
+            sections << current;
+            current = line + "\n";
+        } else {
+            current += line + "\n";
+        }
+    }
+    if (!current.isEmpty()) sections << current;
+
+    if (sections.size() <= 1) {
+        AiRequest req;
+        req.systemPrompt = sys;
+        req.prompt = buildPrompt(manText);
+        req.maxTokens = 8192;
+        req.temperature = 0.3;
+        p->chat(req, onChunk, onDone, onError);
+        return;
+    }
+
+    auto* results = new QStringList;
+    int total = sections.size();
+    int* done = new int(0);
+
+    for (int i = 0; i < total; ++i) {
+        AiRequest req;
+        req.systemPrompt = sys;
+        req.prompt = buildPrompt(sections[i]);
+        req.maxTokens = 8192;
+        req.temperature = 0.3;
+
+        p->chat(req, onChunk,
+            [results, done, total, i, onDone, page, langName](const AiResult& result) {
+                (*results)[i] = result.text;
+                ++(*done);
+                if (*done >= total) {
+                    QString full = results->join("\n\n");
+                    AiResult finalResult;
+                    finalResult.text = full;
+                    finalResult.model = result.model;
+                    onDone(finalResult);
+                    delete results;
+                    delete done;
+                }
+            },
+            [onError, results, done](const QString& err) {
+                onError(err);
+                delete results;
+                delete done;
+            }
+        );
+    }
 }
 
 void AiService::generateExamples(const ManPage& page,
@@ -254,7 +318,7 @@ void AiService::generateExamples(const ManPage& page,
     AiRequest req;
     req.systemPrompt = sys;
     req.prompt = user;
-    req.maxTokens = 4096;
+    req.maxTokens = 8192;
     req.temperature = 0.5;
 
     auto* p = activeProviderPtr();
