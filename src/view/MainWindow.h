@@ -75,5 +75,4 @@ private:
     void updateAiModelInfo();
     void showResultPanel(const QString& title, const QString& content);
     void hideResultPanel();
-    static QString markdownToHtml(const QString& md);
 };
