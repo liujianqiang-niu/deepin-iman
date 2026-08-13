@@ -134,7 +134,6 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     connect(m_aiPanel, &AiChatWidget::translateRequested, this, &MainWindow::onTranslateRequested);
     connect(m_aiPanel, &AiChatWidget::examplesRequested, this, &MainWindow::onExamplesRequested);
     connect(m_aiPanel, &AiChatWidget::questionAsked, this, &MainWindow::onQuestionAsked);
-    connect(m_aiPanel, &AiChatWidget::parseCommandRequested, this, &MainWindow::onParseCommandRequested);
 
     auto* prevSc = new QShortcut(QKeySequence("Alt+Left"), this);
     auto* nextSc = new QShortcut(QKeySequence("Alt+Right"), this);
@@ -272,23 +271,6 @@ void MainWindow::onQuestionAsked(const ManPage& page, const QString& question) {
         });
 }
 
-void MainWindow::onParseCommandRequested(const QString& cmdline) {
-    QString cmd = m_aiSvc->parseCommandQuick(cmdline);
-    if (cmd.isEmpty()) {
-        m_aiPanel->appendMessage("错误", "无法解析命令");
-        return;
-    }
-    auto pages = m_index->findByName(cmd);
-    if (pages.isEmpty()) {
-        m_aiPanel->appendMessage("错误", QString("未找到命令 %1 的 man 手册").arg(cmd));
-        return;
-    }
-    m_aiPanel->appendMessage("系统", QString("解析命令: %1，已找到 %2(%3)，正在跳转...")
-        .arg(cmd).arg(pages.first().name).arg(pages.first().section));
-    openPage(pages.first().name, pages.first().section);
-    m_aiPanel->appendMessage("系统", QString("已跳转到 %1(%2)").arg(pages.first().name).arg(pages.first().section));
-}
-
 void MainWindow::updateAiModelInfo() {
     auto* p = m_aiSvc->activeProviderPtr();
     if (p) {
@@ -384,33 +366,59 @@ void MainWindow::onDataManage() {
     DataManageDialog dlg(this);
     if (dlg.exec() != DDialog::Accepted) return;
 
+    int totalSteps = 0;
+    if (dlg.clearTranslationCache()) ++totalSteps;
+    if (dlg.clearHistory()) ++totalSteps;
+    if (dlg.clearFavorites()) ++totalSteps;
+    if (dlg.clearIndex()) ++totalSteps;
+    if (totalSteps == 0) {
+        m_aiPanel->appendMessage("系统", "未选择任何清理项");
+        return;
+    }
+
+    DDialog progressDlg(this);
+    progressDlg.setWindowTitle("正在清理...");
+    progressDlg.setFixedWidth(400);
+    auto* progressBar = new DProgressBar;
+    progressBar->setRange(0, totalSteps);
+    progressBar->setValue(0);
+    auto* layout = new QVBoxLayout;
+    layout->addWidget(progressBar);
+    auto* content = new QWidget;
+    content->setLayout(layout);
+    progressDlg.addContent(content);
+    progressDlg.setModal(true);
+    progressDlg.show();
+
+    int step = 0;
     QStringList done;
+    auto stepDone = [&](const QString& name) {
+        done << name;
+        progressBar->setValue(++step);
+        QCoreApplication::processEvents();
+    };
+
     if (dlg.clearTranslationCache()) {
         m_trSvc->clearCache();
-        done << "翻译缓存";
+        stepDone("翻译缓存");
     }
     if (dlg.clearHistory()) {
         m_histSvc->clearAll();
-        done << "浏览历史";
+        stepDone("浏览历史");
     }
     if (dlg.clearFavorites()) {
         m_favSvc->clearAll();
-        done << "收藏列表";
+        stepDone("收藏列表");
     }
     if (dlg.clearIndex()) {
         m_index->clearAll();
-        done << "索引数据库";
+        stepDone("索引数据库");
     }
 
-    if (done.isEmpty()) {
-        m_aiPanel->appendMessage("系统", "未选择任何清理项");
-    } else {
-        m_aiPanel->appendMessage("系统", QString("已清理：%1").arg(done.join("、")));
-        if (dlg.clearIndex()) {
-            m_aiPanel->appendMessage("系统", "索引已清空，正在重新扫描...");
-            m_index->scanManPages("/usr/share/man");
-            m_aiPanel->appendMessage("系统", QString("索引重建完成，共 %1 页").arg(m_index->pageCount()));
-        }
+    progressDlg.accept();
+    m_aiPanel->appendMessage("系统", QString("已清理：%1").arg(done.join("、")));
+    if (dlg.clearIndex()) {
+        m_aiPanel->appendMessage("系统", "索引已清空，下次启动时将自动重新扫描");
     }
 }
 

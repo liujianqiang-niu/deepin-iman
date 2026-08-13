@@ -58,17 +58,14 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     m_btnTranslate = new DPushButton("翻译", this);
     m_btnExamples = new DPushButton("生成样例", this);
     m_btnAsk = new DPushButton("提问", this);
-    m_btnParse = new DPushButton("解析命令", this);
     btnLayout->addWidget(m_btnTranslate);
     btnLayout->addWidget(m_btnExamples);
     btnLayout->addWidget(m_btnAsk);
-    btnLayout->addWidget(m_btnParse);
     mainLayout->addLayout(btnLayout);
 
     connect(m_btnTranslate, &DPushButton::clicked, this, &AiChatWidget::onTranslateClicked);
     connect(m_btnExamples, &DPushButton::clicked, this, &AiChatWidget::onExamplesClicked);
     connect(m_btnAsk, &DPushButton::clicked, this, &AiChatWidget::onAskClicked);
-    connect(m_btnParse, &DPushButton::clicked, this, &AiChatWidget::onParseClicked);
 
     m_btnTranslate->setEnabled(false);
     m_btnExamples->setEnabled(false);
@@ -139,12 +136,5 @@ void AiChatWidget::onAskClicked() {
     QString q = m_inputEdit->toPlainText().trimmed();
     if (q.isEmpty() || !m_hasPage) return;
     emit questionAsked(m_currentPage, q);
-    m_inputEdit->clear();
-}
-
-void AiChatWidget::onParseClicked() {
-    QString cmd = m_inputEdit->toPlainText().trimmed();
-    if (cmd.isEmpty()) return;
-    emit parseCommandRequested(cmd);
     m_inputEdit->clear();
 }

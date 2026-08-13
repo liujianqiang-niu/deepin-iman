@@ -47,7 +47,6 @@ public:
                      std::function<void(const AiChunk&)> onChunk,
                      std::function<void(const AiResult&)> onDone,
                      std::function<void(const QString&)> onError);
-    QString parseCommandQuick(const QString& cmdline);
 
     void cancelCurrentTask();
 
@@ -70,4 +69,5 @@ private:
     void loadFromSettings();
     void saveToSettings();
     void rebuildProviders();
+    static QString extractManText(const QString& sourcePath);
 };

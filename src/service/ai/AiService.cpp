@@ -188,16 +188,12 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
     QString sys = loadPromptTemplate("translate");
     QString langName = targetLang.isEmpty() ? "中文" : targetLang;
 
-    QString manText;
-    if (!page.sourcePath.isEmpty()) {
-        QProcess p;
-        p.start("mandoc", {"-Ttxt", page.sourcePath});
-        if (p.waitForFinished(5000) && p.exitCode() == 0) {
-            manText = QString::fromUtf8(p.readAllStandardOutput());
-        }
+    QString manText = extractManText(page.sourcePath);
+    if (manText.isEmpty()) {
+        onError(QString("无法提取 %1(%2) 的手册正文，请确认 mandoc 已安装且手册文件存在")
+                    .arg(page.name).arg(page.section));
+        return;
     }
-    if (manText.isEmpty()) manText = page.title;
-
     if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
 
     QString user = QString("请将以下 man 手册页的英文内容翻译为%1。\n"
@@ -228,15 +224,12 @@ void AiService::generateExamples(const ManPage& page,
                                    std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("examples");
 
-    QString manText;
-    if (!page.sourcePath.isEmpty()) {
-        QProcess p;
-        p.start("mandoc", {"-Ttxt", page.sourcePath});
-        if (p.waitForFinished(5000) && p.exitCode() == 0) {
-            manText = QString::fromUtf8(p.readAllStandardOutput());
-        }
+    QString manText = extractManText(page.sourcePath);
+    if (manText.isEmpty()) {
+        onError(QString("无法提取 %1(%2) 的手册正文，请确认 mandoc 已安装且手册文件存在")
+                    .arg(page.name).arg(page.section));
+        return;
     }
-    if (manText.isEmpty()) manText = page.title;
     if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
 
     static const QMap<int, QString> typeMap = {
@@ -287,13 +280,12 @@ void AiService::askQuestion(const ManPage& page, const QString& question,
     callAi(sys, user, onChunk, onDone, onError);
 }
 
-QString AiService::parseCommandQuick(const QString& cmdline) {
-    QString cmd = cmdline.trimmed();
-    cmd.remove(QRegularExpression("^(sudo\\s+|nohup\\s+|time\\s+)+"));
-    cmd.remove(QRegularExpression("^\\w+\\s*=\\S+\\s+"));
-    QRegularExpression re("^([a-zA-Z][a-zA-Z0-9_.+-]*)");
-    auto m = re.match(cmd);
-    return m.hasMatch() ? m.captured(1) : QString();
+QString AiService::extractManText(const QString& sourcePath) {
+    if (sourcePath.isEmpty()) return QString();
+    QProcess p;
+    p.start("man", {"-P", "cat", "-l", sourcePath});
+    if (!p.waitForFinished(5000) || p.exitCode() != 0) return QString();
+    return QString::fromUtf8(p.readAllStandardOutput());
 }
 
 void AiService::cancelCurrentTask() {

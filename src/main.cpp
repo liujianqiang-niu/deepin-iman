@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     DApplication app(argc, argv);
     app.setOrganizationName("deepin");
     app.setApplicationName("deepin-iman");
-    app.setApplicationVersion("0.1.0");
+    app.setApplicationVersion("1.0.0");
     app.setProductIcon(QIcon::fromTheme("deepin-iman", QIcon(":/assets/icons/deepin-iman.svg")));
     app.setProductName("deepin man 手册");
     app.setApplicationDescription("AI 驱动的 man 手册查看器");

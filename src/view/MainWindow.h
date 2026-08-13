@@ -49,7 +49,6 @@ private slots:
     void onTranslateRequested(const ManPage& page, const QString& targetLang);
     void onExamplesRequested(const ManPage& page);
     void onQuestionAsked(const ManPage& page, const QString& question);
-    void onParseCommandRequested(const QString& cmdline);
     void onManPanelClosed();
     void onTrPanelClosed();
 

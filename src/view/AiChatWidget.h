@@ -29,13 +29,11 @@ signals:
     void translateRequested(const ManPage& page, const QString& targetLang);
     void examplesRequested(const ManPage& page);
     void questionAsked(const ManPage& page, const QString& question);
-    void parseCommandRequested(const QString& cmdline);
 
 private slots:
     void onTranslateClicked();
     void onExamplesClicked();
     void onAskClicked();
-    void onParseClicked();
 
 private:
     DLabel* m_titleLabel;
@@ -47,7 +45,6 @@ private:
     DPushButton* m_btnTranslate;
     DPushButton* m_btnExamples;
     DPushButton* m_btnAsk;
-    DPushButton* m_btnParse;
     DProgressBar* m_progressBar;
 
     QString m_currentModel;
