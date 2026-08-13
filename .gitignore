@@ -5,3 +5,10 @@ obj-*/
 *.qm
 *.user
 .DS_Store
+.omo/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/*.debhelper.log
+debian/*.substvars
+debian/files
+debian/deepin-iman/
