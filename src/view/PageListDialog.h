@@ -3,6 +3,7 @@
 #include <DDialog>
 #include <DListView>
 #include <DPushButton>
+#include <DCheckBox>
 #include <QStandardItemModel>
 #include <QList>
 #include "data/FavoriteDb.h"
@@ -30,6 +31,8 @@ private:
     DPushButton* m_btnDelete;
     bool m_isFavoritesMode = false;
 
+    void createCheckboxRow(const QModelIndex& idx, const QString& text);
+    DCheckBox* getCheckBox(int row) const;
     void toggleSelectAll();
     void deleteSelected();
     QList<int> selectedIds() const;

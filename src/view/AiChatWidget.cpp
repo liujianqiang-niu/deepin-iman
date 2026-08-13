@@ -4,13 +4,19 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTextDocument>
+#include <DGuiApplicationHelper>
+#include <DPalette>
+#include <DStyle>
 
 AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(4, 4, 4, 4);
 
     m_titleLabel = new DLabel("AI 助手", this);
-    m_titleLabel->setStyleSheet("font-weight: bold; font-size: 14px;");
+    QFont titleFont = m_titleLabel->font();
+    titleFont.setBold(true);
+    titleFont.setPixelSize(14);
+    m_titleLabel->setFont(titleFont);
     mainLayout->addWidget(m_titleLabel);
 
     m_modelLabel = new DLabel("当前模型：未配置", this);
@@ -105,16 +111,24 @@ void AiChatWidget::appendAiResult(const QString& role, const QString& content, c
         ? fullHtml.mid(bodyStart + 6, bodyEnd - bodyStart - 6)
         : fullHtml;
 
-    bodyHtml.prepend("<style>"
-                     "code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-family:monospace;}"
-                     "pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto;}"
-                     "pre code{background:transparent;padding:0;}"
-                     "h1,h2,h3{margin-top:8px;margin-bottom:4px;}"
-                     "ul,ol{margin:4px 0;padding-left:20px;}"
-                     "p{margin:4px 0;}"
-                     "table{border-collapse:collapse;}"
-                     "th,td{border:1px solid #ddd;padding:4px 8px;}"
-                     "</style>");
+    bool isDark = DGuiApplicationHelper::instance()->themeType() == DGuiApplicationHelper::DarkType;
+    QString codeBg = isDark ? "#2a2a2a" : "#f0f0f0";
+    QString codeColor = isDark ? "#e0e0e0" : "#333333";
+    QString preBg = isDark ? "#1e1e1e" : "#f5f5f5";
+    QString borderColor = isDark ? "#444444" : "#dddddd";
+
+    bodyHtml.prepend(QString(
+        "<style>"
+        "code{background:%1;color:%2;padding:1px 4px;border-radius:3px;font-family:monospace;}"
+        "pre{background:%3;padding:8px;border-radius:4px;overflow-x:auto;color:%4;}"
+        "pre code{background:transparent;padding:0;color:%4;}"
+        "h1,h2,h3{margin-top:8px;margin-bottom:4px;}"
+        "ul,ol{margin:4px 0;padding-left:20px;}"
+        "p{margin:4px 0;}"
+        "table{border-collapse:collapse;}"
+        "th,td{border:1px solid %5;padding:4px 8px;}"
+        "</style>")
+        .arg(codeBg, codeColor, preBg, codeColor, borderColor));
 
     QString header = QString("<p><b style='color:%1;'>%2:</b>%3</p>").arg(color, role, modelTag);
     m_chatDisplay->append(header);
