@@ -11,7 +11,6 @@ DWIDGET_USE_NAMESPACE
 class LeftSidebar;
 class ManView;
 class AiChatWidget;
-class TerminalPanel;
 class ManIndex;
 class SearchService;
 class ManService;
@@ -40,7 +39,6 @@ private slots:
     void onPrevPage();
     void onNextPage();
     void onOpenSettings();
-    void onToggleTerminal();
     void onToggleFavorite();
     void onRefreshIndex();
     void onShowFavorites();
@@ -54,7 +52,6 @@ private:
     LeftSidebar* m_sidebar;
     ManView* m_manView;
     AiChatWidget* m_aiPanel;
-    TerminalPanel* m_terminal;
 
     ManIndex* m_index;
     SearchService* m_searchSvc;

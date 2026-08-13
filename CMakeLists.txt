@@ -35,7 +35,6 @@ set(APP_SOURCES
     src/view/LeftSidebar.cpp
     src/view/ManView.cpp
     src/view/AiChatWidget.cpp
-    src/view/TerminalPanel.cpp
     src/view/SettingsDialog.cpp
     src/view/TranslationView.cpp
     src/view/ResultViewDialog.cpp

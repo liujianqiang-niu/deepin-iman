@@ -3,7 +3,6 @@
 #include "LeftSidebar.h"
 #include "ManView.h"
 #include "AiChatWidget.h"
-#include "TerminalPanel.h"
 #include "SettingsDialog.h"
 #include "ResultViewDialog.h"
 #include "SplitViewDialog.h"
@@ -66,9 +65,6 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
         }
         auto* settingsAction = menu->addAction("AI 设置");
         connect(settingsAction, &QAction::triggered, this, &MainWindow::onOpenSettings);
-        auto* terminalAction = menu->addAction("终端");
-        terminalAction->setCheckable(true);
-        connect(terminalAction, &QAction::toggled, this, &MainWindow::onToggleTerminal);
         auto* favAction = menu->addAction("收藏当前页");
         connect(favAction, &QAction::triggered, this, &MainWindow::onToggleFavorite);
         auto* favListAction = menu->addAction("收藏列表");
@@ -94,17 +90,7 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     mainSplitter->setStretchFactor(2, 0);
     mainSplitter->setSizes({240, 700, 360});
 
-    auto* outerSplitter = new QSplitter(Qt::Vertical, this);
-    outerSplitter->addWidget(mainSplitter);
-
-    m_terminal = new TerminalPanel;
-    m_terminal->setVisible(false);
-    outerSplitter->addWidget(m_terminal);
-    outerSplitter->setStretchFactor(0, 1);
-    outerSplitter->setStretchFactor(1, 0);
-    outerSplitter->setSizes({600, 150});
-
-    setCentralWidget(outerSplitter);
+    setCentralWidget(mainSplitter);
     resize(1400, 850);
 
     QStringList ids = m_aiSvc->providerIds();
@@ -211,10 +197,6 @@ void MainWindow::onOpenSettings() {
         m_aiPanel->setActiveProvider(m_aiSvc->activeProvider());
         updateAiModelInfo();
     }
-}
-
-void MainWindow::onToggleTerminal() {
-    m_terminal->toggle();
 }
 
 void MainWindow::onToggleFavorite() {
