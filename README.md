@@ -7,13 +7,14 @@ AI-powered man page viewer for deepin v25.
 - **Full-text search** across all man pages (SQLite FTS5) with case-sensitive and whole-word match toggles
 - **Cross-reference navigation** (SEE ALSO links)
 - **mandoc HTML rendering** with structure-preserving output
-- **AI-powered translation** (user-configurable OpenAI-compatible providers, 7 target languages)
-- **Inline split view** — translation and examples appear beside the original text with synchronized scrolling
-- **AI-generated usage examples** with annotations and expected output
-- **AI Q&A** — ask questions about the current man page and get context-aware answers
-- **Command parsing** — paste a command line and jump to the corresponding man page
-- **Favorites** — bookmark man pages and access them from the menu
-- **Browse history** — auto-tracks visited pages (keeps latest 100)
+- **AI-powered translation** — translate English man pages to Chinese, with cache and preset fallback
+- **Inline split view** — translation and examples appear beside the original text, each panel can detach to standalone window
+- **AI-generated usage examples** — section-aware: C code for library functions (section 2/3), shell commands for user commands (section 1/8)
+- **AI Q&A** — ask questions about the current man page, responses rendered as Markdown
+- **Favorites** — bookmark man pages, batch select and delete
+- **Browse history** — auto-tracks visited pages, batch select and delete
+- **Data management** — clear translation cache, history, favorites, or index database
+- **Single instance** — repeat launch activates existing window
 - **Auto index update** — detects new/removed man pages on startup, plus manual refresh
 
 ## Build
@@ -54,3 +55,7 @@ LGPL-3.0+
 ## Author
 
 liujianqiang <liujianqiang@uniontech.com>
+
+## Repository
+
+https://github.com/liujianqiang-niu/deepin-iman

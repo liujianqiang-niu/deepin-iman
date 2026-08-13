@@ -27,7 +27,7 @@ public:
 
 signals:
     void providerChanged(const QString& id);
-    void translateRequested(const ManPage& page, const QString& targetLang);
+    void translateRequested(const ManPage& page);
     void examplesRequested(const ManPage& page);
     void questionAsked(const ManPage& page, const QString& question);
 
@@ -40,7 +40,6 @@ private:
     DLabel* m_titleLabel;
     DLabel* m_modelLabel;
     DComboBox* m_providerCombo;
-    DComboBox* m_langCombo;
     QTextBrowser* m_chatDisplay;
     QTextEdit* m_inputEdit;
     DPushButton* m_btnTranslate;

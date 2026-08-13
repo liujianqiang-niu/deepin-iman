@@ -82,7 +82,7 @@ void TranslationCache::clearAll() {
     q.exec("DELETE FROM translation");
 }
 
-QString TranslationCache::computeHash(const QString& name, int section, qint64 mtime, const QString& targetLang) {
-    QString raw = name + ":" + QString::number(section) + ":" + QString::number(mtime) + ":" + targetLang;
+QString TranslationCache::computeHash(const QString& name, int section, qint64 mtime) {
+    QString raw = name + ":" + QString::number(section) + ":" + QString::number(mtime);
     return QString(QCryptographicHash::hash(raw.toUtf8(), QCryptographicHash::Sha256).toHex());
 }

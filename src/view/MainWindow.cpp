@@ -232,13 +232,13 @@ void MainWindow::onToggleFavorite() {
     }
 }
 
-void MainWindow::onTranslateRequested(const ManPage& page, const QString& targetLang) {
-    m_aiPanel->appendMessage("系统", QString("正在翻译 %1 为%2...").arg(page.name).arg(targetLang));
+void MainWindow::onTranslateRequested(const ManPage& page) {
+    m_aiPanel->appendMessage("系统", QString("正在翻译 %1 为中文...").arg(page.name));
 
-    m_trSvc->getTranslation(page, targetLang,
-        [this, page, targetLang](const QString& result, bool isHtml) {
+    m_trSvc->getTranslation(page,
+        [this, page](const QString& result, bool isHtml) {
             m_aiPanel->appendMessage("系统", QString("翻译完成，右侧面板已显示。"));
-            showResultPanel(QString("翻译：%1(%2) → %3").arg(page.name).arg(page.section).arg(targetLang), result, isHtml);
+            showResultPanel(QString("翻译：%1(%2) → 中文").arg(page.name).arg(page.section), result, isHtml);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);

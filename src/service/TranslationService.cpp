@@ -33,10 +33,10 @@ QString TranslationService::tryPresetPackage(const ManPage& page) const {
     return QString::fromUtf8(p.readAllStandardOutput());
 }
 
-void TranslationService::getTranslation(const ManPage& page, const QString& targetLang,
+void TranslationService::getTranslation(const ManPage& page,
                                           std::function<void(const QString&, bool)> onReady,
                                           std::function<void(const QString&)> onError) {
-    QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime, targetLang);
+    QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime);
 
     QString cachedSource;
     QString cached = m_cache->get(pageHash, &cachedSource);
@@ -45,14 +45,13 @@ void TranslationService::getTranslation(const ManPage& page, const QString& targ
         return;
     }
 
-    // AI 翻译优先；AI 失败/未配置时才降级用本地预设中文 man 包
-    m_ai->translatePage(page, targetLang,
+    m_ai->translatePage(page,
         [this, pageHash](const AiChunk& chunk) { Q_UNUSED(chunk); },
         [this, pageHash, onReady](const AiResult& result) {
             m_cache->put(pageHash, result.text, "ai-" + result.model, result.model);
             onReady(result.text, false);
         },
-        [this, page, pageHash, targetLang, onReady, onError](const QString& err) {
+        [this, page, pageHash, onReady, onError](const QString& err) {
             QString preset = tryPresetPackage(page);
             if (!preset.isEmpty()) {
                 m_cache->put(pageHash, preset, "preset", QString());

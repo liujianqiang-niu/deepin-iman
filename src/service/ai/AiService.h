@@ -35,7 +35,7 @@ public:
     IAiProvider* provider(const QString& id) const;
     IAiProvider* activeProviderPtr() const;
 
-    void translatePage(const ManPage& page, const QString& targetLang,
+    void translatePage(const ManPage& page,
                        std::function<void(const AiChunk&)> onChunk,
                        std::function<void(const AiResult&)> onDone,
                        std::function<void(const QString&)> onError);

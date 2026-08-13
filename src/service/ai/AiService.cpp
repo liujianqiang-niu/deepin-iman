@@ -184,12 +184,11 @@ void AiService::callAi(const QString& systemPrompt, const QString& userPrompt,
     p->chat(req, onChunk, onDone, onError);
 }
 
-void AiService::translatePage(const ManPage& page, const QString& targetLang,
+void AiService::translatePage(const ManPage& page,
                                std::function<void(const AiChunk&)> onChunk,
                                std::function<void(const AiResult&)> onDone,
                                std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("translate");
-    QString langName = targetLang.isEmpty() ? "中文" : targetLang;
 
     QString manText = extractManText(page.sourcePath);
     if (manText.isEmpty()) {
@@ -205,13 +204,13 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
     }
 
     auto buildPrompt = [&](const QString& text) {
-        return QString("请将以下 man 手册页的英文内容翻译为%1。\n"
+        return QString("请将以下 man 手册页的英文内容翻译为中文。\n"
                        "要求：\n"
                        "1. 保留原文的段落结构\n"
                        "2. 保留所有命令、参数、选项不翻译\n"
                        "3. 翻译要准确通顺，符合中文技术文档习惯\n\n"
-                       "命令：%2(%3)\n\n%4")
-                   .arg(langName).arg(page.name).arg(page.section).arg(text);
+                       "命令：%1(%2)\n\n%3")
+                    .arg(page.name).arg(page.section).arg(text);
     };
 
     if (manText.length() <= 3000) {

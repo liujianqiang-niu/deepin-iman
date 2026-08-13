@@ -31,21 +31,6 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     });
     mainLayout->addWidget(m_providerCombo);
 
-    auto* langLayout = new QHBoxLayout;
-    auto* langLabel = new DLabel("翻译语言：", this);
-    langLabel->setStyleSheet("font-size: 12px;");
-    m_langCombo = new DComboBox(this);
-    m_langCombo->addItem("中文", "中文");
-    m_langCombo->addItem("English", "English");
-    m_langCombo->addItem("日本語", "日本語");
-    m_langCombo->addItem("Français", "Français");
-    m_langCombo->addItem("Deutsch", "Deutsch");
-    m_langCombo->addItem("Español", "Español");
-    m_langCombo->addItem("Русский", "Русский");
-    langLayout->addWidget(langLabel);
-    langLayout->addWidget(m_langCombo, 1);
-    mainLayout->addLayout(langLayout);
-
     m_chatDisplay = new QTextBrowser(this);
     m_chatDisplay->setReadOnly(true);
     m_chatDisplay->setOpenExternalLinks(true);
@@ -165,8 +150,7 @@ void AiChatWidget::setProviderModelInfo(const QString& displayName, const QStrin
 
 void AiChatWidget::onTranslateClicked() {
     if (m_hasPage) {
-        QString lang = m_langCombo->currentData().toString();
-        emit translateRequested(m_currentPage, lang);
+        emit translateRequested(m_currentPage);
     }
 }
 
