@@ -3,6 +3,7 @@
 #include "data/ManIndex.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QTextDocument>
 
 AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     auto* mainLayout = new QVBoxLayout(this);
@@ -39,8 +40,9 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     langLayout->addWidget(m_langCombo, 1);
     mainLayout->addLayout(langLayout);
 
-    m_chatDisplay = new DTextEdit(this);
+    m_chatDisplay = new QTextBrowser(this);
     m_chatDisplay->setReadOnly(true);
+    m_chatDisplay->setOpenExternalLinks(true);
     m_chatDisplay->setPlaceholderText("AI 回答将显示在这里...");
     mainLayout->addWidget(m_chatDisplay, 1);
 
@@ -83,15 +85,23 @@ void AiChatWidget::setCurrentPage(const ManPage& page) {
 
 void AiChatWidget::appendMessage(const QString& role, const QString& content) {
     QString color = (role == "AI") ? "#0066cc" : "#333333";
-    QString msg = QString("<p><b style='color:%1;'>%2:</b> %3</p>").arg(color, role, content);
+    QString msg = QString("<p><b style='color:%1;'>%2:</b> %3</p>").arg(color, role, content.toHtmlEscaped());
     m_chatDisplay->append(msg);
 }
 
 void AiChatWidget::appendAiResult(const QString& role, const QString& content, const QString& model) {
     QString color = (role == "AI") ? "#0066cc" : "#333333";
     QString modelTag = model.isEmpty() ? "" : QString(" <span style='color:#999; font-size:11px;'>[%1]</span>").arg(model.toHtmlEscaped());
-    QString msg = QString("<p><b style='color:%1;'>%2:</b>%3 %4</p>").arg(color, role, modelTag, content);
-    m_chatDisplay->append(msg);
+
+    QTextDocument doc;
+    doc.setMarkdown(content);
+    QString renderedHtml = doc.toHtml();
+
+    QString header = QString("<p><b style='color:%1;'>%2:</b>%3</p>").arg(color, role, modelTag);
+
+    m_chatDisplay->append(header);
+    m_chatDisplay->insertHtml(renderedHtml);
+    m_chatDisplay->append("");
 }
 
 void AiChatWidget::setProviderList(const QStringList& ids, const QStringList& displayNames) {

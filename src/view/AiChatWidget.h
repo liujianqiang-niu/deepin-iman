@@ -6,6 +6,7 @@
 #include <DComboBox>
 #include <DLabel>
 #include <DProgressBar>
+#include <QTextBrowser>
 #include "data/ManIndex.h"
 
 DWIDGET_USE_NAMESPACE
@@ -40,8 +41,8 @@ private:
     DLabel* m_modelLabel;
     DComboBox* m_providerCombo;
     DComboBox* m_langCombo;
-    DTextEdit* m_chatDisplay;
-    DTextEdit* m_inputEdit;
+    QTextBrowser* m_chatDisplay;
+    QTextEdit* m_inputEdit;
     DPushButton* m_btnTranslate;
     DPushButton* m_btnExamples;
     DPushButton* m_btnAsk;

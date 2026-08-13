@@ -4,15 +4,13 @@
 #include <QHBoxLayout>
 #include <QDateTime>
 #include <QIcon>
-#include <QCheckBox>
-#include <QLabel>
-#include <DLabel>
+#include <DStyledItemDelegate>
 
 PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     : DDialog(parent)
 {
     setTitle(title);
-    setFixedSize(420, 480);
+    setFixedSize(400, 480);
 
     auto* widget = new QWidget;
     auto* layout = new QVBoxLayout(widget);
@@ -22,6 +20,7 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     m_listView = new DListView(widget);
     m_listView->setModel(m_model);
     m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_listView->setItemDelegate(new DStyledItemDelegate(m_listView));
     layout->addWidget(m_listView);
 
     auto* btnLayout = new QHBoxLayout;
@@ -56,9 +55,10 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
+        row->setCheckable(true);
+        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
     }
-    refreshCheckboxes();
 }
 
 void PageListDialog::setHistory(const QList<HistoryItem>& items) {
@@ -72,44 +72,22 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
+        row->setCheckable(true);
+        row->setCheckState(Qt::Unchecked);
         m_model->appendRow(row);
-    }
-    refreshCheckboxes();
-}
-
-void PageListDialog::refreshCheckboxes() {
-    for (int i = 0; i < m_model->rowCount(); ++i) {
-        QModelIndex idx = m_model->index(i, 0);
-        if (m_listView->indexWidget(idx)) continue;
-
-        auto* rowWidget = new QWidget;
-        auto* rowLayout = new QHBoxLayout(rowWidget);
-        rowLayout->setContentsMargins(4, 0, 0, 0);
-        rowLayout->setSpacing(8);
-
-        auto* checkBox = new QCheckBox(rowWidget);
-        auto* label = new DLabel(m_model->item(i)->text(), rowWidget);
-        rowLayout->addWidget(checkBox);
-        rowLayout->addWidget(label, 1);
-
-        m_listView->setIndexWidget(idx, rowWidget);
     }
 }
 
 void PageListDialog::toggleSelectAll() {
     bool anyUnchecked = false;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        QModelIndex idx = m_model->index(i, 0);
-        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
-                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
-        if (cb && !cb->isChecked()) { anyUnchecked = true; break; }
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Unchecked) { anyUnchecked = true; break; }
     }
     Qt::CheckState state = anyUnchecked ? Qt::Checked : Qt::Unchecked;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        QModelIndex idx = m_model->index(i, 0);
-        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
-                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
-        if (cb) cb->setChecked(state == Qt::Checked);
+        auto* item = m_model->item(i);
+        if (item) item->setCheckState(state);
     }
     m_btnSelectAll->setText(anyUnchecked ? "取消全选" : "全选");
 }
@@ -117,11 +95,9 @@ void PageListDialog::toggleSelectAll() {
 QList<int> PageListDialog::selectedIds() const {
     QList<int> ids;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        QModelIndex idx = m_model->index(i, 0);
-        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
-                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
-        if (cb && cb->isChecked()) {
-            ids << m_model->item(i)->data(Qt::UserRole + 2).toInt();
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Checked) {
+            ids << item->data(Qt::UserRole + 2).toInt();
         }
     }
     return ids;
@@ -139,14 +115,11 @@ void PageListDialog::deleteSelected() {
 
     QList<int> rows;
     for (int i = 0; i < m_model->rowCount(); ++i) {
-        QModelIndex idx = m_model->index(i, 0);
-        auto* cb = qobject_cast<QCheckBox*>(m_listView->indexWidget(idx)
-                    ? m_listView->indexWidget(idx)->findChild<QCheckBox*>() : nullptr);
-        if (cb && cb->isChecked()) rows << i;
+        auto* item = m_model->item(i);
+        if (item && item->checkState() == Qt::Checked) rows << i;
     }
     for (int i = rows.size() - 1; i >= 0; --i) {
         m_model->removeRow(rows[i]);
     }
     m_btnSelectAll->setText("全选");
-    refreshCheckboxes();
 }
