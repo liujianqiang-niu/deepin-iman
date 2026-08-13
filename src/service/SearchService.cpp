@@ -8,37 +8,28 @@ SearchService::SearchService(ManIndex* index, QObject* parent)
 {
 }
 
-QList<ManPage> SearchService::search(const QString& query, int limit, SearchMode mode) const {
+QList<ManPage> SearchService::search(const QString& query, int limit) const {
     QList<ManPage> results;
     QString q = query.trimmed();
     if (q.isEmpty()) return results;
 
     QSet<int> seenIds;
 
-    if (mode == SearchMode::Exact) {
-        auto byName = m_index->findByName(q);
-        for (const auto& p : byName) {
-            results << p;
-            seenIds << p.id;
-            if (results.size() >= limit) return results;
-        }
-    } else {
-        auto byName = m_index->findByName(q);
-        for (const auto& p : byName) {
-            results << p;
-            seenIds << p.id;
-            if (results.size() >= limit) return results;
-        }
+    auto byName = m_index->findByName(q);
+    for (const auto& p : byName) {
+        results << p;
+        seenIds << p.id;
+        if (results.size() >= limit) return results;
+    }
 
-        if (results.size() < limit) {
-            auto byLike = m_index->findByNameLike(q);
-            for (const auto& p : byLike) {
-                if (!seenIds.contains(p.id)) {
-                    results << p;
-                    seenIds << p.id;
-                }
-                if (results.size() >= limit) return results;
+    if (results.size() < limit) {
+        auto byLike = m_index->findByNameLike(q);
+        for (const auto& p : byLike) {
+            if (!seenIds.contains(p.id)) {
+                results << p;
+                seenIds << p.id;
             }
+            if (results.size() >= limit) return results;
         }
     }
 

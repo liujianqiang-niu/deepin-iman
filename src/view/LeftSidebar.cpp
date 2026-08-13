@@ -2,9 +2,9 @@
 #include "LeftSidebar.h"
 #include "data/ManIndex.h"
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QIcon>
+#include <QTimer>
 
 LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     auto* layout = new QVBoxLayout(this);
@@ -12,17 +12,8 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     layout->setSpacing(2);
 
     m_searchEdit = new DSearchEdit(this);
-    m_searchEdit->setPlaceholderText("搜索 man 手册...");
+    m_searchEdit->setPlaceholderText("搜索 man 手册... (不区分大小写)");
     layout->addWidget(m_searchEdit);
-
-    auto* btnLayout = new QHBoxLayout;
-    m_modeBtn = new DPushButton(modeLabel(), this);
-    m_modeBtn->setFixedHeight(28);
-    m_modeBtn->setToolTip("点击切换搜索模式");
-    btnLayout->addStretch();
-    btnLayout->addWidget(m_modeBtn);
-    btnLayout->addStretch();
-    layout->addLayout(btnLayout);
 
     m_navTree = new DTreeView(this);
     m_navModel = new QStandardItemModel(this);
@@ -32,15 +23,17 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     m_navTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     layout->addWidget(m_navTree, 1);
 
-    connect(m_searchEdit, &DSearchEdit::textChanged, this, [this](const QString& t) {
-        if (t.length() >= 2) emit searchRequested(t, m_mode);
+    QTimer* debounce = new QTimer(this);
+    debounce->setSingleShot(true);
+    connect(m_searchEdit, &DSearchEdit::textChanged, this, [this, debounce](const QString& t) {
+        debounce->setProperty("text", t);
+        debounce->start(200);
     });
-    connect(m_modeBtn, &DPushButton::clicked, this, [this]() {
-        m_mode = (m_mode == SearchService::SearchMode::Fuzzy)
-                     ? SearchService::SearchMode::Exact
-                     : SearchService::SearchMode::Fuzzy;
-        m_modeBtn->setText(modeLabel());
+    connect(debounce, &QTimer::timeout, this, [this, debounce]() {
+        QString t = debounce->property("text").toString();
+        if (t.length() >= 1) emit searchRequested(t);
     });
+
     connect(m_navTree, &DTreeView::clicked, this, [this](const QModelIndex& idx) {
         auto* nameItem = m_navModel->item(idx.row(), 0);
         auto* sectionItem = m_navModel->item(idx.row(), 1);
@@ -48,10 +41,6 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
             emit pageSelected(nameItem->text(), sectionItem->text().toInt());
         }
     });
-}
-
-QString LeftSidebar::modeLabel() const {
-    return m_mode == SearchService::SearchMode::Fuzzy ? "模糊搜索" : "精确搜索";
 }
 
 void LeftSidebar::setManPages(const QList<ManPage>& pages) {

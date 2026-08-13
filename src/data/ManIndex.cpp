@@ -289,7 +289,7 @@ QList<ManPage> ManIndex::findByNameLike(const QString& pattern) const {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.prepare("SELECT id, name, section, section_name, source_path, title, "
               "source_mtime, indexed_at FROM man_page WHERE name LIKE ? "
-              "ORDER BY name, section LIMIT 50");
+              "COLLATE NOCASE ORDER BY name, section LIMIT 50");
     q.addBindValue("%" + pattern + "%");
     if (!q.exec()) return results;
     while (q.next()) {

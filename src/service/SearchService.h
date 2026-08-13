@@ -9,12 +9,9 @@ struct ManPage;
 class SearchService : public QObject {
     Q_OBJECT
 public:
-    enum class SearchMode { Exact, Fuzzy };
-    Q_ENUM(SearchMode)
-
     explicit SearchService(ManIndex* index, QObject* parent = nullptr);
 
-    QList<ManPage> search(const QString& query, int limit = 20, SearchMode mode = SearchMode::Fuzzy) const;
+    QList<ManPage> search(const QString& query, int limit = 50) const;
     void openPage(const QString& name, int section);
 
 signals:

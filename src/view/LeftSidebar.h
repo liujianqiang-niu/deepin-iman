@@ -3,11 +3,8 @@
 #include <DWidget>
 #include <DSearchEdit>
 #include <DTreeView>
-#include <DPushButton>
 #include <QStandardItemModel>
 #include <QList>
-
-#include "service/SearchService.h"
 
 DWIDGET_USE_NAMESPACE
 
@@ -21,15 +18,11 @@ public:
     void setManPages(const QList<ManPage>& pages);
 
 signals:
-    void searchRequested(const QString& query, SearchService::SearchMode mode);
+    void searchRequested(const QString& query);
     void pageSelected(const QString& name, int section);
 
 private:
     DSearchEdit* m_searchEdit;
-    DPushButton* m_modeBtn;
     DTreeView* m_navTree;
     QStandardItemModel* m_navModel;
-    SearchService::SearchMode m_mode = SearchService::SearchMode::Fuzzy;
-
-    QString modeLabel() const;
 };

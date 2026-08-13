@@ -4,7 +4,6 @@
 #include <DIconButton>
 #include <QStack>
 #include "data/ManIndex.h"
-#include "service/SearchService.h"
 
 DWIDGET_USE_NAMESPACE
 
@@ -32,7 +31,7 @@ public:
                         QWidget* parent = nullptr);
 
 private slots:
-    void onSearchRequested(const QString& query, SearchService::SearchMode mode);
+    void onSearchRequested(const QString& query);
     void onPageSelected(const QString& name, int section);
     void onCrossRefClicked(const QString& name, int section);
     void onPageRendered(const QString& html);

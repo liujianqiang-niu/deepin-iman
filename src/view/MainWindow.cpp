@@ -6,6 +6,7 @@
 #include "SettingsDialog.h"
 #include "ResultViewDialog.h"
 #include "SplitViewDialog.h"
+#include "PageListDialog.h"
 #include "data/ManIndex.h"
 #include "service/SearchService.h"
 #include "service/ManService.h"
@@ -24,13 +25,11 @@
 #include <QShortcut>
 #include <QIcon>
 #include <QSettings>
-#include <QEventLoop>
-#include <QTimer>
+#include <QProcess>
 #include <QFileDialog>
 #include <QFile>
 #include <QTextStream>
 #include <QDateTime>
-#include <QtConcurrent>
 
 MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* manSvc,
                        AiService* aiSvc, TranslationService* trSvc,
@@ -120,8 +119,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     connect(nextSc, &QShortcut::activated, this, &MainWindow::onNextPage);
 }
 
-void MainWindow::onSearchRequested(const QString& query, SearchService::SearchMode mode) {
-    auto results = m_searchSvc->search(query, 50, mode);
+void MainWindow::onSearchRequested(const QString& query) {
+    auto results = m_searchSvc->search(query, 50);
     m_sidebar->setManPages(results);
 }
 
@@ -322,22 +321,14 @@ void MainWindow::onRefreshIndex() {
     progressDlg.setModal(true);
     progressDlg.show();
 
-    QEventLoop loop;
     connect(m_index, &ManIndex::scanProgress, this, [&](int cur, int total) {
         progressBar->setMaximum(total);
         progressBar->setValue(cur);
         QCoreApplication::processEvents();
     });
-    connect(m_index, &ManIndex::scanFinished, this, [&](int) {
-        progressDlg.accept();
-        loop.quit();
-    });
 
-    QTimer::singleShot(0, this, [this]() {
-        m_index->refreshManPages("/usr/share/man");
-    });
-
-    loop.exec();
+    m_index->refreshManPages("/usr/share/man");
+    progressDlg.accept();
 
     m_aiPanel->appendMessage("系统", QString("索引刷新完成，共 %1 页").arg(m_index->pageCount()));
 }
@@ -348,11 +339,11 @@ void MainWindow::onShowFavorites() {
         m_aiPanel->appendMessage("系统", "暂无收藏");
         return;
     }
-    QStringList lines;
-    for (const auto& item : items) {
-        lines << QString("%1(%2)").arg(item.pageName).arg(item.pageSection);
-    }
-    auto* dlg = new ResultViewDialog("收藏列表", lines.join("\n"), this);
+    auto* dlg = new PageListDialog("收藏列表 — 双击跳转", this);
+    dlg->setFavorites(items);
+    connect(dlg, &PageListDialog::pageSelected, this, [this](const QString& name, int section) {
+        openPage(name, section);
+    });
     dlg->exec();
     dlg->deleteLater();
 }
@@ -363,14 +354,11 @@ void MainWindow::onShowHistory() {
         m_aiPanel->appendMessage("系统", "暂无浏览历史");
         return;
     }
-    QStringList lines;
-    for (const auto& item : items) {
-        lines << QString("%1(%2) - %3")
-                  .arg(item.pageName)
-                  .arg(item.pageSection)
-                  .arg(QDateTime::fromSecsSinceEpoch(item.visitedAt).toString("MM-dd HH:mm"));
-    }
-    auto* dlg = new ResultViewDialog("浏览历史", lines.join("\n"), this);
+    auto* dlg = new PageListDialog("浏览历史 — 双击跳转", this);
+    dlg->setHistory(items);
+    connect(dlg, &PageListDialog::pageSelected, this, [this](const QString& name, int section) {
+        openPage(name, section);
+    });
     dlg->exec();
     dlg->deleteLater();
 }
