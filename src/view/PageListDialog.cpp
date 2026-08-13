@@ -37,7 +37,8 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     connect(m_listView, &DListView::doubleClicked, this, [this](const QModelIndex& idx) {
         auto* item = m_model->item(idx.row());
         if (item) {
-            emit pageSelected(item->text(), item->data(Qt::UserRole + 1).toInt());
+            emit pageSelected(item->data(Qt::UserRole).toString(),
+                              item->data(Qt::UserRole + 1).toInt());
             accept();
         }
     });
@@ -52,7 +53,7 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
         if (item.pageName.isEmpty()) continue;
         QString displayText = QString("%1(%2)").arg(item.pageName).arg(item.pageSection);
         auto* row = new DStandardItem;
-        row->setText(displayText);
+        row->setData(item.pageName, Qt::UserRole);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
         m_model->appendRow(row);
@@ -70,7 +71,7 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
         QString displayText = QString("%1(%2) - %3").arg(item.pageName).arg(item.pageSection)
             .arg(QDateTime::fromSecsSinceEpoch(item.visitedAt).toString("MM-dd HH:mm"));
         auto* row = new DStandardItem;
-        row->setText(displayText);
+        row->setData(item.pageName, Qt::UserRole);
         row->setData(item.pageSection, Qt::UserRole + 1);
         row->setData(item.id, Qt::UserRole + 2);
         m_model->appendRow(row);
@@ -83,13 +84,13 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
 void PageListDialog::createCheckboxRow(const QModelIndex& idx, const QString& text) {
     auto* rowWidget = new QWidget;
     auto* rowLayout = new QHBoxLayout(rowWidget);
-    rowLayout->setContentsMargins(8, 2, 4, 2);
+    rowLayout->setContentsMargins(8, 2, 8, 2);
     rowLayout->setSpacing(8);
 
-    auto* checkBox = new DCheckBox(rowWidget);
     auto* label = new DLabel(text, rowWidget);
-    rowLayout->addWidget(checkBox);
+    auto* checkBox = new DCheckBox(rowWidget);
     rowLayout->addWidget(label, 1);
+    rowLayout->addWidget(checkBox);
 
     m_listView->setIndexWidget(idx, rowWidget);
 }
