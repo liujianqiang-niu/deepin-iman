@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QUuid>
 #include <QProcess>
+#include <QSharedPointer>
 
 AiService::AiService(QObject* parent) : QObject(parent) {
 }
@@ -247,9 +248,11 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
         return;
     }
 
-    auto* results = new QStringList;
     int total = sections.size();
-    int* done = new int(0);
+    auto results = QSharedPointer<QStringList>::create();
+    results->resize(total);
+    auto done = QSharedPointer<int>::create(0);
+    auto errored = QSharedPointer<bool>::create(false);
 
     for (int i = 0; i < total; ++i) {
         AiRequest req;
@@ -259,7 +262,8 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
         req.temperature = 0.3;
 
         p->chat(req, onChunk,
-            [results, done, total, i, onDone, page, langName](const AiResult& result) {
+            [results, done, errored, total, i, onDone](const AiResult& result) {
+                if (*errored) return;
                 (*results)[i] = result.text;
                 ++(*done);
                 if (*done >= total) {
@@ -268,14 +272,12 @@ void AiService::translatePage(const ManPage& page, const QString& targetLang,
                     finalResult.text = full;
                     finalResult.model = result.model;
                     onDone(finalResult);
-                    delete results;
-                    delete done;
                 }
             },
-            [onError, results, done](const QString& err) {
+            [onError, errored](const QString& err) {
+                if (*errored) return;
+                *errored = true;
                 onError(err);
-                delete results;
-                delete done;
             }
         );
     }
