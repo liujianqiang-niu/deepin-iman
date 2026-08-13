@@ -76,7 +76,7 @@ foreach(size 16 22 24 32 48 64 128 256)
 endforeach()
 
 # Install desktop file
-install(FILES debian/deepin-iman.desktop DESTINATION share/applications)
+install(FILES deepin-iman.desktop DESTINATION share/applications)
 
 # Install man page
 install(FILES debian/deepin-iman.1 DESTINATION share/man/man1)
