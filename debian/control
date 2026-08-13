@@ -8,6 +8,7 @@ Build-Depends:
     pkg-config,
     qt6-base-dev,
     qt6-base-dev-tools,
+    qt6-tools-dev,
     libdtk6widget-dev,
     libdtk6core-dev,
     libdtk6gui-dev,
