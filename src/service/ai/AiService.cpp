@@ -180,6 +180,7 @@ void AiService::callAi(const QString& systemPrompt, const QString& userPrompt,
     AiRequest req;
     req.systemPrompt = systemPrompt;
     req.prompt = userPrompt;
+    req.maxTokens = 8192;
     p->chat(req, onChunk, onDone, onError);
 }
 
@@ -373,6 +374,14 @@ void AiService::askQuestion(const ManPage& page, const QString& question,
         onError(QString("无法提取 %1(%2) 的手册正文，请确认 mandoc 已安装且手册文件存在")
                     .arg(page.name).arg(page.section));
         return;
+    }
+
+    // 超长手册截取核心段落，确保不超模型 context window
+    const int CONTEXT_LIMIT = 8000;
+    if (manText.length() > CONTEXT_LIMIT) {
+        int cutPos = manText.indexOf("\n\n", CONTEXT_LIMIT);
+        if (cutPos < 0 || cutPos > CONTEXT_LIMIT + 2000) cutPos = CONTEXT_LIMIT;
+        manText = manText.left(cutPos) + "\n\n[...手册内容较长，已截取核心部分，如需更多细节请缩小问题范围...]";
     }
 
     QString user = QString("用户正在查看 %1(%2) 的 man 手册。\n\n"
