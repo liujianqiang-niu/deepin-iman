@@ -19,9 +19,15 @@ public:
 
 signals:
     void closed();
+    void detachRequested();
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
     DLabel* m_titleLabel;
     DIconButton* m_closeBtn;
+    DIconButton* m_detachBtn;
+    QWidget* m_titleBar;
     QWidget* m_contentHost;
 };

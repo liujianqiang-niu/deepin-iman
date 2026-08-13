@@ -78,6 +78,7 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     }
 
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
+    m_mainSplitter = mainSplitter;
 
     m_sidebar = new LeftSidebar;
     m_manView = new ManView;
@@ -107,6 +108,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
 
     connect(m_manPanel, &EditorPanel::closed, this, &MainWindow::onManPanelClosed);
     connect(m_trPanel, &EditorPanel::closed, this, &MainWindow::onTrPanelClosed);
+    connect(m_manPanel, &EditorPanel::detachRequested, this, &MainWindow::onDetachManPanel);
+    connect(m_trPanel, &EditorPanel::detachRequested, this, &MainWindow::onDetachTrPanel);
 
     setCentralWidget(mainSplitter);
     resize(1400, 850);
@@ -300,6 +303,51 @@ void MainWindow::onManPanelClosed() {
 
 void MainWindow::onTrPanelClosed() {
     m_trPanel->setVisible(false);
+}
+
+void MainWindow::onDetachManPanel() { detachPanel(m_manPanel); }
+void MainWindow::onDetachTrPanel() { detachPanel(m_trPanel); }
+
+void MainWindow::detachPanel(EditorPanel* panel) {
+    if (m_detachedWindows.contains(panel)) return;
+
+    int index = m_mainSplitter->indexOf(panel);
+    if (index < 0) return;
+
+    panel->setVisible(false);
+    panel->setParent(nullptr);
+
+    auto* win = new DMainWindow;
+    win->setWindowTitle(panel->title());
+    win->resize(700, 600);
+    win->setCentralWidget(panel);
+    panel->setVisible(true);
+
+    m_detachedWindows[panel] = win;
+
+    connect(win, &DMainWindow::destroyed, this, [this, panel]() {
+        reattachPanel(panel);
+    });
+
+    win->show();
+}
+
+void MainWindow::reattachPanel(EditorPanel* panel) {
+    if (!m_detachedWindows.contains(panel)) return;
+
+    auto* win = m_detachedWindows.take(panel);
+    if (win->parent() == nullptr) {
+        panel->setParent(this);
+    }
+
+    if (panel == m_manPanel) {
+        m_mainSplitter->insertWidget(1, panel);
+    } else if (panel == m_trPanel) {
+        m_mainSplitter->insertWidget(2, panel);
+    }
+    panel->setVisible(true);
+
+    if (win != sender()) win->deleteLater();
 }
 
 void MainWindow::onRefreshIndex() {

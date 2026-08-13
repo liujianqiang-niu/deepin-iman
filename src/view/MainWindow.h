@@ -3,6 +3,7 @@
 #include <DMainWindow>
 #include <DIconButton>
 #include <QStack>
+#include <QMap>
 #include <QTextBrowser>
 #include <DPushButton>
 #include "data/ManIndex.h"
@@ -51,6 +52,8 @@ private slots:
     void onQuestionAsked(const ManPage& page, const QString& question);
     void onManPanelClosed();
     void onTrPanelClosed();
+    void onDetachManPanel();
+    void onDetachTrPanel();
 
 private:
     LeftSidebar* m_sidebar;
@@ -59,6 +62,8 @@ private:
     EditorPanel* m_trPanel;
     QTextBrowser* m_trView;
     AiChatWidget* m_aiPanel;
+    QSplitter* m_mainSplitter;
+    QMap<EditorPanel*, DMainWindow*> m_detachedWindows;
 
     ManIndex* m_index;
     SearchService* m_searchSvc;
@@ -80,4 +85,6 @@ private:
     void updateAiModelInfo();
     void showResultPanel(const QString& title, const QString& content, bool isHtml);
     void hideResultPanel();
+    void detachPanel(EditorPanel* panel);
+    void reattachPanel(EditorPanel* panel);
 };
