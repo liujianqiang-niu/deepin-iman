@@ -16,6 +16,21 @@ QList<ManPage> SearchService::search(const QString& query, int limit, bool caseS
 
     QSet<int> seenIds;
 
+    if (wholeWord) {
+        auto byName = m_index->findByName(q);
+        for (const auto& p : byName) {
+            if (caseSensitive) {
+                if (p.name != q) continue;
+            } else {
+                if (p.name.toLower() != q.toLower()) continue;
+            }
+            results << p;
+            seenIds << p.id;
+            if (results.size() >= limit) return results;
+        }
+        return results;
+    }
+
     auto byName = m_index->findByName(q);
     for (const auto& p : byName) {
         results << p;
@@ -28,12 +43,6 @@ QList<ManPage> SearchService::search(const QString& query, int limit, bool caseS
         for (const auto& p : byLike) {
             if (!seenIds.contains(p.id)) {
                 if (caseSensitive && !p.name.contains(q, Qt::CaseSensitive)) continue;
-                if (wholeWord) {
-                    QRegularExpression re(QString("\\b%1\\b").arg(QRegularExpression::escape(q)),
-                                         caseSensitive ? QRegularExpression::NoPatternOption
-                                                       : QRegularExpression::CaseInsensitiveOption);
-                    if (!re.match(p.name).hasMatch()) continue;
-                }
                 results << p;
                 seenIds << p.id;
             }

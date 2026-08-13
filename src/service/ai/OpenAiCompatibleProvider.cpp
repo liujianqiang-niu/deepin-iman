@@ -29,10 +29,11 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
     QNetworkRequest request{QUrl(url)};
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", ("Bearer " + m_apiKey).toUtf8());
+    request.setTransferTimeout(120000);
 
     QJsonObject body;
     body["model"] = m_model;
-    body["stream"] = true;
+    body["stream"] = false;
     body["max_tokens"] = req.maxTokens;
     body["temperature"] = req.temperature;
 
@@ -45,42 +46,60 @@ void OpenAiCompatibleProvider::chat(const AiRequest& req,
 
     m_accumulated.clear();
     m_reply = m_nam.post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
-    m_reply->setReadBufferSize(0);
 
     QTimer::singleShot(120000, m_reply, [this]() {
         if (m_reply && m_reply->isRunning()) m_reply->abort();
     });
 
-    connect(m_reply, &QIODevice::readyRead, this, [this, onChunk]() {
-        QByteArray data = m_reply->readAll();
-        for (const auto& line : data.split('\n')) {
-            QString s = QString::fromUtf8(line).trimmed();
-            if (!s.startsWith("data: ")) continue;
-            s = s.mid(6);
-            if (s == "[DONE]") continue;
-            auto doc = QJsonDocument::fromJson(s.toUtf8());
-            auto delta = doc.object()
-                            .value("choices").toArray().at(0).toObject()
-                            .value("delta").toObject()
-                            .value("content").toString();
-            if (!delta.isEmpty()) {
-                m_accumulated += delta;
-                onChunk({delta});
-            }
-        }
-    });
-
     connect(m_reply, &QNetworkReply::finished, this, [this, onDone, onError]() {
         if (m_reply->error() != QNetworkReply::NoError && m_reply->error() != QNetworkReply::OperationCanceledError) {
             onError(m_reply->errorString());
-        } else {
-            AiResult result;
-            result.text = m_accumulated;
-            result.model = m_model;
-            onDone(result);
+            m_reply->deleteLater();
+            m_reply = nullptr;
+            return;
         }
+
+        QByteArray data = m_reply->readAll();
         m_reply->deleteLater();
         m_reply = nullptr;
+
+        auto doc = QJsonDocument::fromJson(data);
+        if (!doc.isObject()) {
+            onError(QString("响应解析失败，非 JSON 格式。前 200 字节: %1")
+                        .arg(QString::fromUtf8(data.left(200))));
+            return;
+        }
+
+        auto obj = doc.object();
+
+        if (obj.contains("error")) {
+            QString errMsg = obj.value("error").toObject().value("message").toString();
+            if (errMsg.isEmpty()) errMsg = QString::fromUtf8(data.left(500));
+            onError(QString("API 错误: %1").arg(errMsg));
+            return;
+        }
+
+        auto choices = obj.value("choices").toArray();
+        if (choices.isEmpty()) {
+            onError(QString("API 返回无 choices，响应: %1").arg(QString::fromUtf8(data.left(500))));
+            return;
+        }
+
+        auto message = choices.at(0).toObject().value("message").toObject();
+        QString content = message.value("content").toString();
+
+        if (content.isEmpty()) {
+            onError("API 返回空内容，请检查模型名称是否正确");
+            return;
+        }
+
+        AiResult result;
+        result.text = content;
+        result.model = m_model;
+        auto usage = obj.value("usage").toObject();
+        result.inputTokens = usage.value("prompt_tokens").toInt();
+        result.outputTokens = usage.value("completion_tokens").toInt();
+        onDone(result);
     });
 
     connect(m_reply, &QNetworkReply::errorOccurred, this, [onError](QNetworkReply::NetworkError) {

@@ -4,6 +4,7 @@
 #include <DIconButton>
 #include <QStack>
 #include <QTextBrowser>
+#include <DPushButton>
 #include "data/ManIndex.h"
 
 DWIDGET_USE_NAMESPACE
@@ -51,6 +52,7 @@ private:
     LeftSidebar* m_sidebar;
     ManView* m_manView;
     QTextBrowser* m_resultView;
+    DPushButton* m_resultCloseBtn;
     AiChatWidget* m_aiPanel;
 
     ManIndex* m_index;

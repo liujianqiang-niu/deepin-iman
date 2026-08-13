@@ -3,7 +3,7 @@
 #include <DWidget>
 #include <DSearchEdit>
 #include <DTreeView>
-#include <DIconButton>
+#include <DPushButton>
 #include <QStandardItemModel>
 #include <QList>
 
@@ -24,8 +24,8 @@ signals:
 
 private:
     DSearchEdit* m_searchEdit;
-    DIconButton* m_btnCase;
-    DIconButton* m_btnWholeWord;
+    DPushButton* m_btnCase;
+    DPushButton* m_btnWholeWord;
     DTreeView* m_navTree;
     QStandardItemModel* m_navModel;
 

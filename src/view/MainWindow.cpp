@@ -79,20 +79,33 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
 
     m_sidebar = new LeftSidebar;
     m_manView = new ManView;
+
+    auto* resultContainer = new QWidget;
+    auto* resultLayout = new QVBoxLayout(resultContainer);
+    resultLayout->setContentsMargins(0, 0, 0, 0);
+    resultLayout->setSpacing(0);
+    m_resultCloseBtn = new DPushButton("✕ 关闭");
+    m_resultCloseBtn->setFixedHeight(24);
+    m_resultCloseBtn->setVisible(false);
+    resultLayout->addWidget(m_resultCloseBtn);
     m_resultView = new QTextBrowser;
-    m_resultView->setVisible(false);
     m_resultView->setOpenExternalLinks(true);
+    m_resultView->setVisible(false);
+    resultLayout->addWidget(m_resultView, 1);
+
     m_aiPanel = new AiChatWidget;
 
     mainSplitter->addWidget(m_sidebar);
     mainSplitter->addWidget(m_manView);
-    mainSplitter->addWidget(m_resultView);
+    mainSplitter->addWidget(resultContainer);
     mainSplitter->addWidget(m_aiPanel);
     mainSplitter->setStretchFactor(0, 0);
     mainSplitter->setStretchFactor(1, 1);
     mainSplitter->setStretchFactor(2, 1);
     mainSplitter->setStretchFactor(3, 0);
     mainSplitter->setSizes({240, 500, 500, 360});
+
+    connect(m_resultCloseBtn, &DPushButton::clicked, this, &MainWindow::hideResultPanel);
 
     setCentralWidget(mainSplitter);
     resize(1400, 850);
@@ -311,19 +324,12 @@ void MainWindow::showResultPanel(const QString& title, const QString& content) {
     m_resultView->setDocumentTitle(title);
     m_resultView->setPlainText(content);
     m_resultView->setVisible(true);
-
-    auto* srcBar = m_manView->verticalScrollBar();
-    auto* dstBar = m_resultView->verticalScrollBar();
-    srcBar->disconnect(this);
-    dstBar->disconnect(this);
-    connect(srcBar, &QScrollBar::valueChanged, dstBar, &QScrollBar::setValue);
-    connect(dstBar, &QScrollBar::valueChanged, srcBar, &QScrollBar::setValue);
+    m_resultCloseBtn->setVisible(true);
 }
 
 void MainWindow::hideResultPanel() {
     m_resultView->setVisible(false);
-    m_manView->verticalScrollBar()->disconnect(this);
-    m_resultView->verticalScrollBar()->disconnect(this);
+    m_resultCloseBtn->setVisible(false);
 }
 
 void MainWindow::onRefreshIndex() {

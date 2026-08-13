@@ -175,3 +175,19 @@ add_executable(TestIntegration tests/TestIntegration.cpp
 target_link_libraries(TestIntegration PRIVATE Qt6::Core Qt6::Sql Qt6::Concurrent Qt6::Test)
 target_include_directories(TestIntegration PRIVATE src src/data src/service ${CMAKE_CURRENT_BINARY_DIR})
 add_test(NAME TestIntegration COMMAND TestIntegration)
+
+# TestAiProvider
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TestAiProvider.moc
+    COMMAND ${MOC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/TestAiProvider.cpp
+            -o ${CMAKE_CURRENT_BINARY_DIR}/TestAiProvider.moc
+    DEPENDS tests/TestAiProvider.cpp
+    VERBATIM
+)
+add_executable(TestAiProvider tests/TestAiProvider.cpp
+    src/service/ai/OpenAiCompatibleProvider.cpp
+    src/service/ai/IAiProvider.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/TestAiProvider.moc)
+target_link_libraries(TestAiProvider PRIVATE Qt6::Core Qt6::Network Qt6::Test)
+target_include_directories(TestAiProvider PRIVATE src src/service/ai ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME TestAiProvider COMMAND TestAiProvider)

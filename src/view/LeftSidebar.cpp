@@ -8,6 +8,13 @@
 #include <QTimer>
 #include <DPushButton>
 
+static void styleToggleButton(DPushButton* btn, const QString& label) {
+    btn->setText(label);
+    btn->setToolTip(label);
+    btn->setCheckable(true);
+    btn->setFixedSize(32, 28);
+}
+
 LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -20,18 +27,14 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
     m_searchEdit->setPlaceholderText("搜索 man 手册...");
     searchLayout->addWidget(m_searchEdit, 1);
 
-    m_btnCase = new DIconButton(this);
-    m_btnCase->setIcon(QIcon::fromTheme("format-text-capital"));
+    m_btnCase = new DPushButton(this);
+    styleToggleButton(m_btnCase, "Aa");
     m_btnCase->setToolTip("区分大小写");
-    m_btnCase->setCheckable(true);
-    m_btnCase->setFixedSize(28, 28);
     searchLayout->addWidget(m_btnCase);
 
-    m_btnWholeWord = new DIconButton(this);
-    m_btnWholeWord->setIcon(QIcon::fromTheme("edit-select-all"));
+    m_btnWholeWord = new DPushButton(this);
+    styleToggleButton(m_btnWholeWord, "W");
     m_btnWholeWord->setToolTip("全字匹配");
-    m_btnWholeWord->setCheckable(true);
-    m_btnWholeWord->setFixedSize(28, 28);
     searchLayout->addWidget(m_btnWholeWord);
 
     layout->addLayout(searchLayout);
@@ -51,8 +54,8 @@ LeftSidebar::LeftSidebar(QWidget* parent) : DWidget(parent) {
         debounce->start(200);
     });
     connect(debounce, &QTimer::timeout, this, [this]() { emitSearch(); });
-    connect(m_btnCase, &DIconButton::clicked, this, [this]() { emitSearch(); });
-    connect(m_btnWholeWord, &DIconButton::clicked, this, [this]() { emitSearch(); });
+    connect(m_btnCase, &DPushButton::clicked, this, [this]() { emitSearch(); });
+    connect(m_btnWholeWord, &DPushButton::clicked, this, [this]() { emitSearch(); });
 
     connect(m_navTree, &DTreeView::clicked, this, [this](const QModelIndex& idx) {
         auto* nameItem = m_navModel->item(idx.row(), 0);
