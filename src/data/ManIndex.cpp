@@ -262,6 +262,13 @@ int ManIndex::pageCount() const {
     return q.next() ? q.value(0).toInt() : 0;
 }
 
+void ManIndex::clearAll() {
+    QSqlQuery q(m_db);
+    q.exec("DELETE FROM man_page");
+    q.exec("DELETE FROM man_fts");
+    emit scanFinished(0);
+}
+
 QList<ManPage> ManIndex::findByName(const QString& name) const {
     QList<ManPage> results;
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));

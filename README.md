@@ -40,7 +40,6 @@ cmake --build .
 | `manpages-posix` | POSIX standard man pages (recommended) |
 | `manpages-posix-dev` | POSIX development man pages (recommended) |
 | `manpages-zh` or `manpages-cn` | Chinese man pages (recommended) |
-| `glibc-doc` | GNU C library documentation (recommended) |
 
 ## Install
 

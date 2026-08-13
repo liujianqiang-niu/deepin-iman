@@ -28,6 +28,7 @@ public:
     int refreshManPages(const QString& manRoot);
     bool needsUpdate(const QString& manRoot) const;
     int pageCount() const;
+    void clearAll();
 
     QList<ManPage> findByName(const QString& name) const;
     QList<ManPage> findByNameLike(const QString& pattern) const;

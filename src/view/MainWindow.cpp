@@ -4,8 +4,8 @@
 #include "ManView.h"
 #include "AiChatWidget.h"
 #include "SettingsDialog.h"
-#include "ResultViewDialog.h"
 #include "PageListDialog.h"
+#include "DataManageDialog.h"
 #include "data/ManIndex.h"
 #include "service/SearchService.h"
 #include "service/ManService.h"
@@ -72,6 +72,8 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
         connect(histAction, &QAction::triggered, this, &MainWindow::onShowHistory);
         auto* refreshAction = menu->addAction("刷新索引");
         connect(refreshAction, &QAction::triggered, this, &MainWindow::onRefreshIndex);
+        auto* dataAction = menu->addAction("数据管理");
+        connect(dataAction, &QAction::triggered, this, &MainWindow::onDataManage);
         // DTitlebar 内置"关于"菜单项由 DApplication 统一提供，不再重复添加
     }
 
@@ -80,32 +82,31 @@ MainWindow::MainWindow(ManIndex* index, SearchService* searchSvc, ManService* ma
     m_sidebar = new LeftSidebar;
     m_manView = new ManView;
 
-    auto* resultContainer = new QWidget;
-    auto* resultLayout = new QVBoxLayout(resultContainer);
-    resultLayout->setContentsMargins(0, 0, 0, 0);
-    resultLayout->setSpacing(0);
-    m_resultCloseBtn = new DPushButton("✕ 关闭");
-    m_resultCloseBtn->setFixedHeight(24);
-    m_resultCloseBtn->setVisible(false);
-    resultLayout->addWidget(m_resultCloseBtn);
-    m_resultView = new QTextBrowser;
-    m_resultView->setOpenExternalLinks(true);
-    m_resultView->setVisible(false);
-    resultLayout->addWidget(m_resultView, 1);
+    m_manPanel = new EditorPanel;
+    m_manPanel->setTitle("原文");
+    m_manPanel->setContent(m_manView);
+
+    m_trPanel = new EditorPanel;
+    m_trView = new QTextBrowser;
+    m_trView->setOpenExternalLinks(true);
+    m_trPanel->setTitle("翻译");
+    m_trPanel->setContent(m_trView);
+    m_trPanel->setVisible(false);
 
     m_aiPanel = new AiChatWidget;
 
     mainSplitter->addWidget(m_sidebar);
-    mainSplitter->addWidget(m_manView);
-    mainSplitter->addWidget(resultContainer);
+    mainSplitter->addWidget(m_manPanel);
+    mainSplitter->addWidget(m_trPanel);
     mainSplitter->addWidget(m_aiPanel);
     mainSplitter->setStretchFactor(0, 0);
     mainSplitter->setStretchFactor(1, 1);
     mainSplitter->setStretchFactor(2, 1);
     mainSplitter->setStretchFactor(3, 0);
-    mainSplitter->setSizes({240, 500, 500, 360});
+    mainSplitter->setSizes({240, 600, 600, 360});
 
-    connect(m_resultCloseBtn, &DPushButton::clicked, this, &MainWindow::hideResultPanel);
+    connect(m_manPanel, &EditorPanel::closed, this, &MainWindow::onManPanelClosed);
+    connect(m_trPanel, &EditorPanel::closed, this, &MainWindow::onTrPanelClosed);
 
     setCentralWidget(mainSplitter);
     resize(1400, 850);
@@ -167,6 +168,7 @@ void MainWindow::openPage(const QString& name, int section) {
 }
 
 void MainWindow::onPageRendered(const QString& html) {
+    if (!m_manPanel->isVisible()) m_manPanel->setVisible(true);
     m_manView->loadHtml(html);
 }
 
@@ -230,22 +232,10 @@ void MainWindow::onToggleFavorite() {
 void MainWindow::onTranslateRequested(const ManPage& page, const QString& targetLang) {
     m_aiPanel->appendMessage("系统", QString("正在翻译 %1 为%2...").arg(page.name).arg(targetLang));
 
-    QString originalText;
-    if (!page.sourcePath.isEmpty()) {
-        QProcess p;
-        p.start("mandoc", {"-Ttxt", page.sourcePath});
-        if (p.waitForFinished(5000) && p.exitCode() == 0) {
-            originalText = QString::fromUtf8(p.readAllStandardOutput());
-        }
-    }
-    if (originalText.isEmpty()) originalText = page.title;
-
-    showResultPanel(QString("原文：%1(%2)").arg(page.name).arg(page.section), originalText);
-
     m_trSvc->getTranslation(page, targetLang,
-        [this, page, targetLang](const QString& result) {
+        [this, page, targetLang](const QString& result, bool isHtml) {
             m_aiPanel->appendMessage("系统", QString("翻译完成，右侧面板已显示。"));
-            showResultPanel(QString("翻译：%1(%2) → %3").arg(page.name).arg(page.section).arg(targetLang), result);
+            showResultPanel(QString("翻译：%1(%2) → %3").arg(page.name).arg(page.section).arg(targetLang), result, isHtml);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -256,23 +246,11 @@ void MainWindow::onTranslateRequested(const ManPage& page, const QString& target
 void MainWindow::onExamplesRequested(const ManPage& page) {
     m_aiPanel->appendMessage("系统", "正在生成 " + page.name + " 使用样例...");
 
-    QString originalText;
-    if (!page.sourcePath.isEmpty()) {
-        QProcess p;
-        p.start("mandoc", {"-Ttxt", page.sourcePath});
-        if (p.waitForFinished(5000) && p.exitCode() == 0) {
-            originalText = QString::fromUtf8(p.readAllStandardOutput());
-        }
-    }
-    if (originalText.isEmpty()) originalText = page.title;
-
-    showResultPanel(QString("原文：%1(%2)").arg(page.name).arg(page.section), originalText);
-
     auto* exampleSvc = new ExampleService(m_aiSvc, this);
     exampleSvc->generateExamples(page,
         [this, page](const QString& result) {
             m_aiPanel->appendMessage("系统", "样例生成完成，右侧面板已显示。");
-            showResultPanel(QString("样例：%1(%2)").arg(page.name).arg(page.section), result);
+            showResultPanel(QString("样例：%1(%2)").arg(page.name).arg(page.section), result, false);
         },
         [this](const QString& err) {
             m_aiPanel->appendMessage("错误", err);
@@ -320,16 +298,26 @@ void MainWindow::updateAiModelInfo() {
     }
 }
 
-void MainWindow::showResultPanel(const QString& title, const QString& content) {
-    m_resultView->setDocumentTitle(title);
-    m_resultView->setMarkdown(content);
-    m_resultView->setVisible(true);
-    m_resultCloseBtn->setVisible(true);
+void MainWindow::showResultPanel(const QString& title, const QString& content, bool isHtml) {
+    m_trPanel->setTitle(title);
+    if (isHtml) {
+        m_trView->setHtml(content);
+    } else {
+        m_trView->setMarkdown(content);
+    }
+    m_trPanel->setVisible(true);
 }
 
 void MainWindow::hideResultPanel() {
-    m_resultView->setVisible(false);
-    m_resultCloseBtn->setVisible(false);
+    m_trPanel->setVisible(false);
+}
+
+void MainWindow::onManPanelClosed() {
+    m_manPanel->setVisible(false);
+}
+
+void MainWindow::onTrPanelClosed() {
+    m_trPanel->setVisible(false);
 }
 
 void MainWindow::onRefreshIndex() {
@@ -372,6 +360,7 @@ void MainWindow::onShowFavorites() {
     connect(dlg, &PageListDialog::pageSelected, this, [this](const QString& name, int section) {
         openPage(name, section);
     });
+    connect(dlg, &PageListDialog::favoriteDeleted, this, &MainWindow::onFavoriteDeleted);
     dlg->exec();
     dlg->deleteLater();
 }
@@ -389,4 +378,43 @@ void MainWindow::onShowHistory() {
     });
     dlg->exec();
     dlg->deleteLater();
+}
+
+void MainWindow::onDataManage() {
+    DataManageDialog dlg(this);
+    if (dlg.exec() != DDialog::Accepted) return;
+
+    QStringList done;
+    if (dlg.clearTranslationCache()) {
+        m_trSvc->clearCache();
+        done << "翻译缓存";
+    }
+    if (dlg.clearHistory()) {
+        m_histSvc->clearAll();
+        done << "浏览历史";
+    }
+    if (dlg.clearFavorites()) {
+        m_favSvc->clearAll();
+        done << "收藏列表";
+    }
+    if (dlg.clearIndex()) {
+        m_index->clearAll();
+        done << "索引数据库";
+    }
+
+    if (done.isEmpty()) {
+        m_aiPanel->appendMessage("系统", "未选择任何清理项");
+    } else {
+        m_aiPanel->appendMessage("系统", QString("已清理：%1").arg(done.join("、")));
+        if (dlg.clearIndex()) {
+            m_aiPanel->appendMessage("系统", "索引已清空，正在重新扫描...");
+            m_index->scanManPages("/usr/share/man");
+            m_aiPanel->appendMessage("系统", QString("索引重建完成，共 %1 页").arg(m_index->pageCount()));
+        }
+    }
+}
+
+void MainWindow::onFavoriteDeleted(int pageId) {
+    m_favSvc->remove(pageId);
+    m_aiPanel->appendMessage("系统", "已删除该收藏");
 }

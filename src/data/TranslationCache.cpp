@@ -39,11 +39,14 @@ void TranslationCache::createSchema() {
            "  quality TEXT DEFAULT 'draft')");
 }
 
-QString TranslationCache::get(const QString& pageHash) const {
+QString TranslationCache::get(const QString& pageHash, QString* outSource) const {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
-    q.prepare("SELECT zh_text FROM translation WHERE page_hash = ?");
+    q.prepare("SELECT zh_text, source FROM translation WHERE page_hash = ?");
     q.addBindValue(pageHash);
-    if (q.exec() && q.next()) return q.value(0).toString();
+    if (q.exec() && q.next()) {
+        if (outSource) *outSource = q.value(1).toString();
+        return q.value(0).toString();
+    }
     return QString();
 }
 
@@ -72,6 +75,11 @@ void TranslationCache::remove(const QString& pageHash) {
     q.prepare("DELETE FROM translation WHERE page_hash = ?");
     q.addBindValue(pageHash);
     q.exec();
+}
+
+void TranslationCache::clearAll() {
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.exec("DELETE FROM translation");
 }
 
 QString TranslationCache::computeHash(const QString& name, int section, qint64 mtime) {

@@ -34,12 +34,11 @@ set(APP_SOURCES
     src/view/MainWindow.cpp
     src/view/LeftSidebar.cpp
     src/view/ManView.cpp
+    src/view/EditorPanel.cpp
     src/view/AiChatWidget.cpp
     src/view/SettingsDialog.cpp
-    src/view/TranslationView.cpp
-    src/view/ResultViewDialog.cpp
-    src/view/SplitViewDialog.cpp
     src/view/PageListDialog.cpp
+    src/view/DataManageDialog.cpp
 )
 
 add_executable(deepin-iman ${APP_SOURCES} resources.qrc)

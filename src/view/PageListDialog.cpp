@@ -1,8 +1,10 @@
 // src/view/PageListDialog.cpp
 #include "PageListDialog.h"
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QDateTime>
 #include <QIcon>
+#include <DPushButton>
 
 PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     : DDialog(parent)
@@ -20,6 +22,12 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
     m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     layout->addWidget(m_listView);
 
+    auto* btnLayout = new QHBoxLayout;
+    auto* btnDelete = new DPushButton("删除选中收藏", widget);
+    btnLayout->addStretch();
+    btnLayout->addWidget(btnDelete);
+    layout->addLayout(btnLayout);
+
     addContent(widget);
     addButton("关闭", true, DDialog::ButtonRecommend);
 
@@ -36,6 +44,7 @@ PageListDialog::PageListDialog(const QString& title, QWidget* parent)
             accept();
         }
     });
+    connect(btnDelete, &DPushButton::clicked, this, &PageListDialog::deleteSelectedFavorite);
 }
 
 void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
@@ -46,6 +55,7 @@ void PageListDialog::setFavorites(const QList<FavoriteItem>& items) {
             QString("%1(%2)").arg(item.pageName).arg(item.pageSection));
         row->setText(item.pageName);
         row->setData(item.pageSection, Qt::UserRole + 1);
+        row->setData(item.pageId, Qt::UserRole + 2);
         m_model->appendRow(row);
     }
 }
@@ -61,4 +71,15 @@ void PageListDialog::setHistory(const QList<HistoryItem>& items) {
         row->setData(item.pageSection, Qt::UserRole + 1);
         m_model->appendRow(row);
     }
+}
+
+void PageListDialog::deleteSelectedFavorite() {
+    auto idx = m_listView->currentIndex();
+    if (!idx.isValid()) return;
+    auto* item = m_model->item(idx.row());
+    if (!item) return;
+    int pageId = item->data(Qt::UserRole + 2).toInt();
+    if (pageId <= 0) return;
+    emit favoriteDeleted(pageId);
+    m_model->removeRow(idx.row());
 }

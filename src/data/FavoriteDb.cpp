@@ -60,6 +60,11 @@ bool FavoriteDb::remove(int pageId) {
     return q.exec();
 }
 
+void FavoriteDb::clearAll() {
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.exec("DELETE FROM favorite");
+}
+
 bool FavoriteDb::isFavorite(int pageId) const {
     QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
     q.prepare("SELECT 1 FROM favorite WHERE page_id = ?");

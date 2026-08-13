@@ -21,3 +21,7 @@ bool FavoriteService::isFavorite(int pageId) const {
 QList<FavoriteItem> FavoriteService::list() const {
     return m_db->list();
 }
+
+void FavoriteService::clearAll() {
+    m_db->clearAll();
+}

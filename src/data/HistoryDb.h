@@ -25,6 +25,7 @@ public:
     QList<HistoryItem> recent(int limit = 50) const;
     QList<HistoryItem> since(qint64 timestamp) const;
     void cleanup(int keepCount = 100);
+    void clearAll();
 
 private:
     QString m_dbPath;

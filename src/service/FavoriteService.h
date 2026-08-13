@@ -11,6 +11,7 @@ public:
     bool remove(int pageId);
     bool isFavorite(int pageId) const;
     QList<FavoriteItem> list() const;
+    void clearAll();
 
 private:
     FavoriteDb* m_db;

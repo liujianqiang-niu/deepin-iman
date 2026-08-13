@@ -227,9 +227,38 @@ void AiService::generateExamples(const ManPage& page,
                                    std::function<void(const AiResult&)> onDone,
                                    std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("examples");
-    QString user = QString("为以下命令生成 3-5 个使用样例，每个样例包含：命令、注释说明、预期输出：\n\n"
-                           "命令：%1(%2)\n\n%3")
-                       .arg(page.name).arg(page.section).arg(page.title);
+
+    QString manText;
+    if (!page.sourcePath.isEmpty()) {
+        QProcess p;
+        p.start("mandoc", {"-Ttxt", page.sourcePath});
+        if (p.waitForFinished(5000) && p.exitCode() == 0) {
+            manText = QString::fromUtf8(p.readAllStandardOutput());
+        }
+    }
+    if (manText.isEmpty()) manText = page.title;
+    if (manText.length() > 6000) manText = manText.left(6000) + "\n\n[...内容过长，已截断...]";
+
+    static const QMap<int, QString> typeMap = {
+        {1, "用户命令（shell 命令）"}, {2, "系统调用（C 语言接口）"},
+        {3, "库函数（C 语言接口）"}, {4, "特殊文件/设备"},
+        {5, "文件格式/配置"}, {6, "游戏"}, {7, "杂项/约定"}, {8, "管理命令（shell 命令）"}
+    };
+    QString pageType = typeMap.value(page.section, "手册页");
+    bool isCInterface = (page.section == 2 || page.section == 3);
+
+    QString exampleKind = isCInterface
+        ? "C 语言代码样例（包含头文件、main 函数、编译说明）"
+        : "命令行样例（包含命令、注释和预期输出）";
+
+    QString user = QString("这是 man 手册页 %1(%2)，属于：%3。\n"
+                           "请为它生成 3-5 个%4。每个样例包含："
+                           "%5。必须基于下方手册正文真实内容，不要臆造。\n\n"
+                           "%6 手册正文：\n%7")
+                       .arg(page.name).arg(page.section).arg(pageType)
+                       .arg(exampleKind)
+                       .arg(isCInterface ? "C 代码、注释说明、编译运行命令" : "命令、注释说明、预期输出")
+                       .arg(page.name).arg(manText);
 
     AiRequest req;
     req.systemPrompt = sys;

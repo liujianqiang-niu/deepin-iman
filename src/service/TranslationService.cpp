@@ -17,6 +17,10 @@ bool TranslationService::presetPackageAvailable() const {
     return m_presetDir.exists() && !m_presetDir.entryList(QStringList() << "man*", QDir::Dirs).isEmpty();
 }
 
+void TranslationService::clearCache() {
+    if (m_cache) m_cache->clearAll();
+}
+
 QString TranslationService::tryPresetPackage(const ManPage& page) const {
     QString sectionDir = QString("man%1").arg(page.section);
     QString path = m_presetDir.absoluteFilePath(sectionDir + "/" + page.name + "." + QString::number(page.section) + ".gz");
@@ -30,28 +34,31 @@ QString TranslationService::tryPresetPackage(const ManPage& page) const {
 }
 
 void TranslationService::getTranslation(const ManPage& page, const QString& targetLang,
-                                          std::function<void(const QString&)> onReady,
+                                          std::function<void(const QString&, bool)> onReady,
                                           std::function<void(const QString&)> onError) {
     QString pageHash = TranslationCache::computeHash(page.name, page.section, page.sourceMtime);
 
-    QString cached = m_cache->get(pageHash);
+    QString cachedSource;
+    QString cached = m_cache->get(pageHash, &cachedSource);
     if (!cached.isEmpty()) {
-        onReady(cached);
+        onReady(cached, cachedSource.startsWith("preset"));
         return;
     }
 
-    QString preset = tryPresetPackage(page);
-    if (!preset.isEmpty()) {
-        m_cache->put(pageHash, preset, "preset", QString());
-        onReady(preset);
-        return;
-    }
-
+    // AI 翻译优先；AI 失败/未配置时才降级用本地预设中文 man 包
     m_ai->translatePage(page, targetLang,
         [this, pageHash](const AiChunk& chunk) { Q_UNUSED(chunk); },
         [this, pageHash, onReady](const AiResult& result) {
             m_cache->put(pageHash, result.text, "ai-" + result.model, result.model);
-            onReady(result.text);
+            onReady(result.text, false);
         },
-        onError);
+        [this, page, pageHash, targetLang, onReady, onError](const QString& err) {
+            QString preset = tryPresetPackage(page);
+            if (!preset.isEmpty()) {
+                m_cache->put(pageHash, preset, "preset", QString());
+                onReady(preset, true);
+            } else {
+                onError(err);
+            }
+        });
 }

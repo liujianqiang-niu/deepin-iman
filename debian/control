@@ -29,9 +29,8 @@ Depends:
 Recommends:
     manpages-zh | manpages-cn,
     manpages-posix,
-    manpages-posix-dev,
-    glibc-doc,
- Description: AI-powered man page viewer for deepin
+    manpages-posix-dev
+Description: AI-powered man page viewer for deepin
   deepin-iman is a man page browser that deeply integrates AI capabilities
   with traditional man page experience. It allows users to browse, search,
   and navigate all man pages, and leverages AI to provide multi-language

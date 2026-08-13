@@ -101,3 +101,8 @@ void HistoryDb::cleanup(int keepCount) {
     q.addBindValue(keepCount);
     q.exec();
 }
+
+void HistoryDb::clearAll() {
+    QSqlQuery q(QSqlDatabase::database(m_db.connectionName()));
+    q.exec("DELETE FROM history");
+}

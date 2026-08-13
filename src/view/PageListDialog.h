@@ -19,8 +19,10 @@ public:
 
 signals:
     void pageSelected(const QString& name, int section);
+    void favoriteDeleted(int pageId);
 
 private:
     DListView* m_listView;
     QStandardItemModel* m_model;
+    void deleteSelectedFavorite();
 };

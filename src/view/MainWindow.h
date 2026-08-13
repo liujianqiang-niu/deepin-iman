@@ -6,6 +6,7 @@
 #include <QTextBrowser>
 #include <DPushButton>
 #include "data/ManIndex.h"
+#include "EditorPanel.h"
 
 DWIDGET_USE_NAMESPACE
 
@@ -43,16 +44,21 @@ private slots:
     void onRefreshIndex();
     void onShowFavorites();
     void onShowHistory();
+    void onDataManage();
+    void onFavoriteDeleted(int pageId);
     void onTranslateRequested(const ManPage& page, const QString& targetLang);
     void onExamplesRequested(const ManPage& page);
     void onQuestionAsked(const ManPage& page, const QString& question);
     void onParseCommandRequested(const QString& cmdline);
+    void onManPanelClosed();
+    void onTrPanelClosed();
 
 private:
     LeftSidebar* m_sidebar;
     ManView* m_manView;
-    QTextBrowser* m_resultView;
-    DPushButton* m_resultCloseBtn;
+    EditorPanel* m_manPanel;
+    EditorPanel* m_trPanel;
+    QTextBrowser* m_trView;
     AiChatWidget* m_aiPanel;
 
     ManIndex* m_index;
@@ -73,6 +79,6 @@ private:
     void openPage(const QString& name, int section);
     void updateNavButtons();
     void updateAiModelInfo();
-    void showResultPanel(const QString& title, const QString& content);
+    void showResultPanel(const QString& title, const QString& content, bool isHtml);
     void hideResultPanel();
 };

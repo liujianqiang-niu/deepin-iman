@@ -13,3 +13,7 @@ void HistoryService::recordVisit(int pageId, const QString& pageName, int pageSe
 QList<HistoryItem> HistoryService::recent(int limit) const {
     return m_db->recent(limit);
 }
+
+void HistoryService::clearAll() {
+    m_db->clearAll();
+}
