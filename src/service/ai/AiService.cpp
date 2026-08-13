@@ -369,28 +369,11 @@ void AiService::askQuestion(const ManPage& page, const QString& question,
                               std::function<void(const QString&)> onError) {
     QString sys = loadPromptTemplate("qa");
 
-    QString manText = extractManText(page.sourcePath);
-    if (manText.isEmpty()) {
-        onError(QString("无法提取 %1(%2) 的手册正文，请确认 mandoc 已安装且手册文件存在")
-                    .arg(page.name).arg(page.section));
-        return;
-    }
-
-    const int CONTEXT_LIMIT = 8000;
-    if (manText.length() > CONTEXT_LIMIT) {
-        int cutPos = manText.indexOf("\n\n", CONTEXT_LIMIT);
-        if (cutPos < 0 || cutPos > CONTEXT_LIMIT + 2000) cutPos = CONTEXT_LIMIT;
-        manText = manText.left(cutPos) + "\n\n[...手册内容较长，已截取核心部分...]";
-    }
-
-    QString user = QString("用户问题：%1\n\n"
-                           "以下是 %2(%3) 的 man 手册正文，请仔细阅读并基于其中的内容直接回答用户问题：\n\n%4\n\n"
-                           "回答要求：\n"
-                           "1. 用中文回答\n"
-                           "2. 紧扣用户问题，不要答非所问\n"
-                           "3. 引用手册中的具体内容\n"
-                           "4. 如有必要给出实际命令示例")
-                       .arg(question).arg(page.name).arg(page.section).arg(manText);
+    QString user = QString("用户正在查看 %1(%2) 的 man 手册。\n"
+                           "用户问题：%3\n\n"
+                           "请用中文回答，紧扣问题，给出实用准确的解答。"
+                           "如有必要给出命令示例。")
+                       .arg(page.name).arg(page.section).arg(question);
 
     auto* p = activeProviderPtr();
     if (!p || !p->isConfigured()) {
