@@ -51,14 +51,17 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     m_btnTranslate = new DPushButton("翻译", this);
     m_btnExamples = new DPushButton("生成样例", this);
     m_btnAsk = new DPushButton("提问", this);
+    m_btnClear = new DPushButton("清屏", this);
     btnLayout->addWidget(m_btnTranslate);
     btnLayout->addWidget(m_btnExamples);
     btnLayout->addWidget(m_btnAsk);
+    btnLayout->addWidget(m_btnClear);
     mainLayout->addLayout(btnLayout);
 
     connect(m_btnTranslate, &DPushButton::clicked, this, &AiChatWidget::onTranslateClicked);
     connect(m_btnExamples, &DPushButton::clicked, this, &AiChatWidget::onExamplesClicked);
     connect(m_btnAsk, &DPushButton::clicked, this, &AiChatWidget::onAskClicked);
+    connect(m_btnClear, &DPushButton::clicked, this, &AiChatWidget::clearChat);
 
     m_btnTranslate->setEnabled(false);
     m_btnExamples->setEnabled(false);
@@ -116,9 +119,8 @@ void AiChatWidget::appendAiResult(const QString& role, const QString& content, c
         .arg(codeBg, codeColor, preBg, codeColor, borderColor));
 
     QString header = QString("<p><b style='color:%1;'>%2:</b>%3</p>").arg(color, role, modelTag);
-    m_chatDisplay->append(header);
-    m_chatDisplay->insertHtml(bodyHtml);
-    m_chatDisplay->append("");
+    QString fullMsg = header + bodyHtml;
+    m_chatDisplay->append(fullMsg);
 }
 
 void AiChatWidget::setProviderList(const QStringList& ids, const QStringList& displayNames) {
@@ -163,4 +165,8 @@ void AiChatWidget::onAskClicked() {
     if (q.isEmpty() || !m_hasPage) return;
     emit questionAsked(m_currentPage, q);
     m_inputEdit->clear();
+}
+
+void AiChatWidget::clearChat() {
+    m_chatDisplay->clear();
 }

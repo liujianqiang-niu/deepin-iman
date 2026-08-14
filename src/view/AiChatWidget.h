@@ -21,6 +21,7 @@ public:
     void setCurrentPage(const ManPage& page);
     void appendMessage(const QString& role, const QString& content);
     void appendAiResult(const QString& role, const QString& content, const QString& model);
+    void clearChat();
     void setProviderList(const QStringList& ids, const QStringList& displayNames);
     void setActiveProvider(const QString& id);
     void setProviderModelInfo(const QString& displayName, const QString& model);
@@ -45,6 +46,7 @@ private:
     DPushButton* m_btnTranslate;
     DPushButton* m_btnExamples;
     DPushButton* m_btnAsk;
+    DPushButton* m_btnClear;
     DProgressBar* m_progressBar;
 
     QString m_currentModel;
