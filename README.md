@@ -11,6 +11,8 @@ AI-powered man page viewer for deepin v25.
 - **Inline split view** — translation and examples appear beside the original text, each panel can detach to standalone window
 - **AI-generated usage examples** — section-aware: C code for library functions (section 2/3), shell commands for user commands (section 1/8)
 - **AI Q&A** — ask questions about the current man page, responses rendered as Markdown
+  - **New chat** — a "+" button at the top-right of the AI panel starts a fresh conversation (clears the display), like mainstream AI chat clients
+  - **Enter to send** — press Enter to send a question; Shift+Enter inserts a newline for multi-line input
 - **Favorites** — bookmark man pages, batch select and delete
 - **Browse history** — auto-tracks visited pages, batch select and delete
 - **Data management** — clear translation cache, history, favorites, or index database

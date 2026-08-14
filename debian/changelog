@@ -1,3 +1,15 @@
+deepin-iman (1.1.0) unstable; urgency=medium
+
+  * Release 1.1.0.
+  * New chat: replace bottom "清屏" button with a "+" new-chat button at
+    the top-right of the AI panel header, consistent with mainstream AI
+    chat clients; clicking it clears the conversation display.
+  * Enter to send: pressing Enter in the AI question input sends the
+    question; Shift+Enter inserts a newline for multi-line input.
+  * Update placeholder text to hint the Enter-to-send shortcut.
+
+ -- liujianqiang <liujianqiang@uniontech.com>  Thu, 14 Aug 2026 10:00:00 +0800
+
 deepin-iman (1.0.0) unstable; urgency=medium
 
   * Release 1.0.0.

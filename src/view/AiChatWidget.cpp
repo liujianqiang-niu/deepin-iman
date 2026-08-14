@@ -4,6 +4,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTextDocument>
+#include <QEvent>
+#include <QKeyEvent>
 #include <DGuiApplicationHelper>
 #include <DPalette>
 #include <DStyle>
@@ -12,12 +14,26 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(4, 4, 4, 4);
 
+    // Header row: title on the left, "new chat" + button on the right
+    auto* headerLayout = new QHBoxLayout;
+    headerLayout->setContentsMargins(0, 0, 0, 0);
+    headerLayout->setSpacing(4);
+
     m_titleLabel = new DLabel("AI 助手", this);
     QFont titleFont = m_titleLabel->font();
     titleFont.setBold(true);
     titleFont.setPixelSize(14);
     m_titleLabel->setFont(titleFont);
-    mainLayout->addWidget(m_titleLabel);
+
+    m_btnNewChat = new DIconButton(this);
+    m_btnNewChat->setIcon(QIcon::fromTheme("list-add"));
+    m_btnNewChat->setFixedSize(24, 24);
+    m_btnNewChat->setToolTip("新建聊天");
+
+    headerLayout->addWidget(m_titleLabel);
+    headerLayout->addStretch();
+    headerLayout->addWidget(m_btnNewChat);
+    mainLayout->addLayout(headerLayout);
 
     m_modelLabel = new DLabel("当前模型：未配置", this);
     mainLayout->addWidget(m_modelLabel);
@@ -39,7 +55,8 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
 
     m_inputEdit = new DTextEdit(this);
     m_inputEdit->setMaximumHeight(80);
-    m_inputEdit->setPlaceholderText("输入问题，点击「提问」...");
+    m_inputEdit->setPlaceholderText("输入问题，点击「提问」或按 Enter 发送...");
+    m_inputEdit->installEventFilter(this);
     mainLayout->addWidget(m_inputEdit);
 
     m_progressBar = new DProgressBar(this);
@@ -51,17 +68,15 @@ AiChatWidget::AiChatWidget(QWidget* parent) : DWidget(parent) {
     m_btnTranslate = new DPushButton("翻译", this);
     m_btnExamples = new DPushButton("生成样例", this);
     m_btnAsk = new DPushButton("提问", this);
-    m_btnClear = new DPushButton("清屏", this);
     btnLayout->addWidget(m_btnTranslate);
     btnLayout->addWidget(m_btnExamples);
     btnLayout->addWidget(m_btnAsk);
-    btnLayout->addWidget(m_btnClear);
     mainLayout->addLayout(btnLayout);
 
+    connect(m_btnNewChat, &DIconButton::clicked, this, &AiChatWidget::clearChat);
     connect(m_btnTranslate, &DPushButton::clicked, this, &AiChatWidget::onTranslateClicked);
     connect(m_btnExamples, &DPushButton::clicked, this, &AiChatWidget::onExamplesClicked);
     connect(m_btnAsk, &DPushButton::clicked, this, &AiChatWidget::onAskClicked);
-    connect(m_btnClear, &DPushButton::clicked, this, &AiChatWidget::clearChat);
 
     m_btnTranslate->setEnabled(false);
     m_btnExamples->setEnabled(false);
@@ -169,4 +184,17 @@ void AiChatWidget::onAskClicked() {
 
 void AiChatWidget::clearChat() {
     m_chatDisplay->clear();
+}
+
+bool AiChatWidget::eventFilter(QObject* obj, QEvent* event) {
+    // Enter (with or without keypad) sends the question; Shift+Enter inserts a newline.
+    if (obj == m_inputEdit && event->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        if ((ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter)
+            && !(ke->modifiers() & Qt::ShiftModifier)) {
+            onAskClicked();
+            return true;
+        }
+    }
+    return DWidget::eventFilter(obj, event);
 }

@@ -3,6 +3,7 @@
 #include <DWidget>
 #include <DTextEdit>
 #include <DPushButton>
+#include <DIconButton>
 #include <DComboBox>
 #include <DLabel>
 #include <DProgressBar>
@@ -32,6 +33,9 @@ signals:
     void examplesRequested(const ManPage& page);
     void questionAsked(const ManPage& page, const QString& question);
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 private slots:
     void onTranslateClicked();
     void onExamplesClicked();
@@ -40,13 +44,13 @@ private slots:
 private:
     DLabel* m_titleLabel;
     DLabel* m_modelLabel;
+    DIconButton* m_btnNewChat;
     DComboBox* m_providerCombo;
     QTextBrowser* m_chatDisplay;
     QTextEdit* m_inputEdit;
     DPushButton* m_btnTranslate;
     DPushButton* m_btnExamples;
     DPushButton* m_btnAsk;
-    DPushButton* m_btnClear;
     DProgressBar* m_progressBar;
 
     QString m_currentModel;
